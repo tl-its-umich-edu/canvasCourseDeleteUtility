@@ -11,8 +11,8 @@ import org.apache.commons.logging.LogFactory;
 
 
 
-public class DeleteUtils {
-private static Log M_log = LogFactory.getLog(DeleteUtils.class);
+public class Utils {
+private static Log M_log = LogFactory.getLog(Utils.class);
     
 	public static Properties getPropertiesFromURL(String propertiesFileURL) {
 		Properties props = new Properties();

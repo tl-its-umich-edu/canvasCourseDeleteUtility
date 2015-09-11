@@ -13,36 +13,44 @@ import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
 
+import edu.umich.tl.CourseDelete.CanvasCallEnum;
+
 public class ApiCallHandler {
 	private static Log M_log = LogFactory.getLog(ApiCallHandler.class);
 	private String canvasURL=CourseDelete.canvasURL;
 	private String esbURL=CourseDelete.esbURL;
-	private static String canvasToken=CourseDelete.canvasToken;
+	private CanvasCallEnum canvasCall;
 	
-
-	public enum ApiTypes{
-		Term(1), UnPublishedCourseList(2);
-		private int apiType;
-		private ApiTypes(int apiType) {
-			this.apiType=apiType;
-		}
-		public int getApiType() {
-			return apiType;
-		}
+	private static String canvasToken=CourseDelete.canvasToken;
+	private static final String PER_PAGE = "per_page=100";
+	private static final String API_VERSION = "/api/v1";
+	
+	public ApiCallHandler(CanvasCallEnum apiCallType) {
+		this.canvasCall=apiCallType;
 	}
-	public HttpResponse getApiResponse(ApiTypes apiType, int typeOfApiCall) {
+	
+	public enum CanvasApiEnum{
+		TERM, UNPUBLISHED_COURSE_LIST;
+	}
+
+	public HttpResponse getApiResponse(CanvasApiEnum canvasApi) {
 		HttpResponse httpResponse = null;
-		String url=null;
-		switch(apiType.getApiType()) {
-		case 1: 
-			if(typeOfApiCall==1) {
-				url= canvasURL+"/api/v1/accounts/1/terms?per_page=100";
-				 httpResponse = canvalApiCall(url);
-			}else if(typeOfApiCall==2) {
-				url= esbURL+"/api/v1/accounts/1/terms?per_page=100";
-				httpResponse = esbApiCall(url);
+		String url = null;
+		switch (canvasApi) {
+		case TERM:
+			String urlSuffix=API_VERSION+"/accounts/1/terms?"+PER_PAGE;
+			if (canvasCall.equals(CanvasCallEnum.API_DIRECT_CANVAS)) {
+				url = canvasURL + urlSuffix;
+				httpResponse = apiDirectCanvas(url);
+			} else if (canvasCall.equals(CanvasCallEnum.API_ESB_CANVAS)) {
+				url = esbURL + urlSuffix;
+				httpResponse =apiESBCanvas(url);
 			}
-			M_log.info("TermURL: "+url);
+			M_log.debug("TermURL: " + url);
+			break;
+		case UNPUBLISHED_COURSE_LIST:
+			break;
+		default:
 			break;
 		}
 		return httpResponse;
@@ -50,7 +58,7 @@ public class ApiCallHandler {
 
 	
 
-	private static HttpResponse canvalApiCall(String url) {
+	private HttpResponse apiDirectCanvas(String url) {
 		HttpUriRequest clientRequest = null;
 		HttpResponse httpResponse=null;
 		try {
@@ -74,7 +82,7 @@ public class ApiCallHandler {
 		return httpResponse;
 	}
 
-	private static HttpResponse esbApiCall(String url) {
+	private HttpResponse apiESBCanvas(String url) {
 		//Stub: to be implemented later when ESB to canvas call is ready
 		return null;
 	}
