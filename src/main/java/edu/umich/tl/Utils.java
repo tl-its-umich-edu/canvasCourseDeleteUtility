@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.Properties;
 
 import org.apache.commons.logging.Log;
@@ -64,6 +66,13 @@ private static Log M_log = LogFactory.getLog(Utils.class);
 
 		return in;
 	}
+	public static String dateChopper(String dateAsString) {
+		String[] split = dateAsString.split("T");
+		return split[0];
+	}
 	
-
+	public static boolean isEmpty(String value) {
+		return (value == null) || (value.trim().equals(""));
+	}
+	
 }
