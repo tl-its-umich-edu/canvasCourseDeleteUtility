@@ -1,11 +1,7 @@
 package edu.umich.tl;
 
 import java.io.IOException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,8 +20,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import edu.umich.tl.ApiCallHandler.CanvasApiEnum;
-import edu.umich.tl.CourseDelete.CanvasCallEnum;
+import edu.umich.tl.ApiCallHandler.RequestTypeEnum;
 
 
 
@@ -98,7 +93,7 @@ public class CourseDelete {
 	 */
 	private static void getTerms(ApiCallHandler apiHandler, CoursesForDelete cfd) {
 	    M_log.debug("getTerms(): called");
-		HttpResponse httpResponse = apiHandler.getApiResponse(CanvasApiEnum.TERM, null,null);
+		HttpResponse httpResponse = apiHandler.getApiResponse(RequestTypeEnum.TERM, null,null);
 		ObjectMapper mapper = new ObjectMapper();
 		int statusCode = httpResponse.getStatusLine().getStatusCode();
 		if(statusCode!=200) {
@@ -112,22 +107,15 @@ public class CourseDelete {
 			terms = mapper.readValue(jsonResponseString,new TypeReference<HashMap<String,Object>>(){});
 			ArrayList<HashMap<String, Object>> termsList = (ArrayList<HashMap<String, Object>>) terms.get("enrollment_terms");
 			for (HashMap<String, Object> eachTerm : termsList) {
-				SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-				try {
 					String startDate = (String)eachTerm.get("start_at");
 					String endDate = (String)eachTerm.get("end_at");
 					if(startDate!=null&&endDate!=null) {
-						Term term =new Term();
-						term.setStartDate(dateFormat.parse(Utils.dateChopper(startDate)));
-						term.setEndDate(dateFormat.parse(Utils.dateChopper(endDate)));
-						term.setCanvasTermId(String.valueOf((Integer)eachTerm.get("id")));
-						term.setSisTermId((String)eachTerm.get("sis_term_id"));
-						term.setTermName((String)eachTerm.get("name"));
+						Term term =new Term()
+						.setCanvasTermId(String.valueOf((Integer)eachTerm.get("id")))
+						.setSisTermId((String)eachTerm.get("sis_term_id"))
+						.setTermName((String)eachTerm.get("name"));
 						cfd.addTerm(term);
-					}
-				} catch (java.text.ParseException e) {
-					M_log.error("While parsing the date as string to Date object ParseException occurred",e);
-				}
+				} 
 			}
 		} catch (JsonParseException e) {
 			M_log.error("getPreviousTerms() has JsonParseException",e);
@@ -163,9 +151,9 @@ public class CourseDelete {
 		HttpResponse httpResponse=null;
 		if(url!=null) {
 			//sending null for canvasTermId is fine since we get the url framed from the pagination object from the response header. 
-			httpResponse=apiHandler.getApiResponse(CanvasApiEnum.UNPUBLISHED_COURSE_LIST_PAGINATION_URL,null,url);
+			httpResponse=apiHandler.getApiResponse(RequestTypeEnum.UNPUBLISHED_COURSE_LIST_PAGINATION_URL,null,url);
 		}else {
-			httpResponse = apiHandler.getApiResponse(CanvasApiEnum.UNPUBLISHED_COURSE_LIST,canvasTermIdForSisTermId,url);
+			httpResponse = apiHandler.getApiResponse(RequestTypeEnum.UNPUBLISHED_COURSE_LIST,canvasTermIdForSisTermId,url);
 		}
 		ObjectMapper mapper = new ObjectMapper();
 		int statusCode = httpResponse.getStatusLine().getStatusCode();
@@ -179,11 +167,11 @@ public class CourseDelete {
 			String jsonResponseString = EntityUtils.toString(entity);
 			courseList = mapper.readValue(jsonResponseString,new TypeReference<List<Object>>(){});
 			for (HashMap<String, Object> course : courseList) {
-				Course aCourse=new Course();
-				aCourse.setId((Integer)course.get("id"));
-				aCourse.setCourseName((String)course.get("name"));
-				aCourse.setStartDate((String)course.get("start_at"));
-				aCourse.setEndDate((String)course.get("end_at"));
+				Course aCourse=new Course()
+				.setId((Integer)course.get("id"))
+				.setCourseName((String)course.get("name"))
+				.setStartDate((String)course.get("start_at"))
+				.setEndDate((String)course.get("end_at"));
 
 				coursesForDelete.addCourse(aCourse);
 			}
@@ -260,7 +248,7 @@ public class CourseDelete {
      * <https://umich.test.instructure.com/api/v1/courses/26164/enrollments?type=TeacherEnrollment&page=1&per_page=100>; rel="last"
      */
 	protected static String getNextPageUrl(HttpResponse response) {
-		M_log.debug("getNextPageLink(): Called");
+		M_log.debug("getNextPageUrl(): Called");
 		String result = null;
 		if (!response.containsHeader("Link")) {
 			return result;

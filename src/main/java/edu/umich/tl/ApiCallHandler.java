@@ -28,14 +28,14 @@ public class ApiCallHandler {
 		this.canvasCall=canvasCall;
 	}
 	
-	public enum CanvasApiEnum{
+	public enum RequestTypeEnum{
 		TERM, UNPUBLISHED_COURSE_LIST, UNPUBLISHED_COURSE_LIST_PAGINATION_URL;
 	}
 
-	public HttpResponse getApiResponse(CanvasApiEnum canvasApi, String canvasTermIdForSisTermId, String url) {
+	public HttpResponse getApiResponse(RequestTypeEnum requestType, String canvasTermIdForSisTermId, String url) {
 		HttpResponse httpResponse = null;
 		String urlSuffix;
-		switch (canvasApi) {
+		switch (requestType) {
 		case TERM:
 			urlSuffix=API_VERSION+"/accounts/1/terms?"+PER_PAGE;
 			httpResponse = apiCallToCanvas(urlSuffix);
@@ -44,7 +44,7 @@ public class ApiCallHandler {
 			urlSuffix=API_VERSION+"/accounts/1/courses?enrollment_term_id="+canvasTermIdForSisTermId+"&published=false&"+PER_PAGE;
 			httpResponse = apiCallToCanvas(urlSuffix);
 			break;
-			// we are having separate case for unpublished course list since pagination object in the response header has fully framed url and hence we can use it diretly,
+			// we are having separate case for unpublished course list since pagination object in the response header has fully framed url and hence we can use it directly,
 			// we still need to make the check if this call is to 'direct' or 'esb' canvas. We can get info from the 'CanvasCallEnum'
 		case UNPUBLISHED_COURSE_LIST_PAGINATION_URL:
 			if (isThisIsADirectCanvasCall()) {
