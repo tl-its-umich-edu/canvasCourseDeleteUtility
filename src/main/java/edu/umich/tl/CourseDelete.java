@@ -51,6 +51,8 @@ public class CourseDelete {
 			System.exit(1);
 		}
 		getUnpublishedCourseList(canvasTermIdForSisTermId,coursesForDelete,apiHandler,null);
+		//Todo Delete
+		M_log.debug(coursesForDelete.getCourses().size());
 	}
 
 	public enum CanvasCallEnum{

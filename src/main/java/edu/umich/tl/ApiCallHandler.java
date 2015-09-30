@@ -38,20 +38,15 @@ public class ApiCallHandler {
 		switch (requestType) {
 		case TERM:
 			urlSuffix=API_VERSION+"/accounts/1/terms?"+PER_PAGE;
-			httpResponse = apiCallToCanvas(urlSuffix);
+			httpResponse = urlConstructorAndCanvasCallManager(urlSuffix, true);
 			break;
 		case UNPUBLISHED_COURSE_LIST:
 			urlSuffix=API_VERSION+"/accounts/1/courses?enrollment_term_id="+canvasTermIdForSisTermId+"&published=false&"+PER_PAGE;
-			httpResponse = apiCallToCanvas(urlSuffix);
+			httpResponse = urlConstructorAndCanvasCallManager(urlSuffix, true);
 			break;
 			// we are having separate case for unpublished course list since pagination object in the response header has fully framed url and hence we can use it directly,
-			// we still need to make the check if this call is to 'direct' or 'esb' canvas. We can get that info from the 'CanvasCallEnum'
 		case UNPUBLISHED_COURSE_LIST_PAGINATION_URL:
-			if (isThisIsADirectCanvasCall()) {
-				httpResponse=apiDirectCanvas(url);
-			}else if (isThisAEsbCanvasCall()) {
-				httpResponse=apiESBCanvas(url);
-			}
+			httpResponse=urlConstructorAndCanvasCallManager(url, false);;
 			break;
 		default:
 			M_log.warn("Unknown RequestType \""+requestType+"\" encounted");
@@ -60,17 +55,26 @@ public class ApiCallHandler {
 		return httpResponse;
 	}
 	
-	private HttpResponse apiCallToCanvas(String urlSuffix) {
-		String url = null;
+	private HttpResponse urlConstructorAndCanvasCallManager(String url, Boolean shouldAddPrefix) {
+		String urlFull = null;
 		HttpResponse httpResponse = null;
-		if (isThisIsADirectCanvasCall()) {
-			url = canvasURL + urlSuffix;
-			httpResponse = apiDirectCanvas(url);
+
+		if (isThisADirectCanvasCall()) {
+			if(shouldAddPrefix) {
+				urlFull = canvasURL + url;
+			}else {
+				urlFull=url;
+			}
+			httpResponse = apiDirectCanvas(urlFull);
 		} else if (isThisAEsbCanvasCall()) {
-			url = esbURL + urlSuffix;
-			httpResponse =apiESBCanvas(url);
+			if(shouldAddPrefix) {
+				urlFull = esbURL + url;
+			}else {
+				urlFull=url;
+			}
+			httpResponse =apiESBCanvas(urlFull);
 		}
-		M_log.info("The Api call \"" + url+ "\" has StatusCode: "+httpResponse.getStatusLine().getStatusCode());
+		M_log.info("The Api call \"" + urlFull+ "\" has StatusCode: "+httpResponse.getStatusLine().getStatusCode());
 		return httpResponse;
 	}
 	
@@ -79,7 +83,7 @@ public class ApiCallHandler {
 		return canvasCall.equals(CanvasCallEnum.API_ESB_CANVAS);
 	}
 
-	private boolean isThisIsADirectCanvasCall() {
+	private boolean isThisADirectCanvasCall() {
 		return canvasCall.equals(CanvasCallEnum.API_DIRECT_CANVAS);
 	}
 
