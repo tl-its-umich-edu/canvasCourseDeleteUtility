@@ -45,7 +45,7 @@ public class ApiCallHandler {
 			httpResponse = apiCallToCanvas(urlSuffix);
 			break;
 			// we are having separate case for unpublished course list since pagination object in the response header has fully framed url and hence we can use it directly,
-			// we still need to make the check if this call is to 'direct' or 'esb' canvas. We can get info from the 'CanvasCallEnum'
+			// we still need to make the check if this call is to 'direct' or 'esb' canvas. We can get that info from the 'CanvasCallEnum'
 		case UNPUBLISHED_COURSE_LIST_PAGINATION_URL:
 			if (isThisIsADirectCanvasCall()) {
 				httpResponse=apiDirectCanvas(url);
@@ -54,6 +54,7 @@ public class ApiCallHandler {
 			}
 			break;
 		default:
+			M_log.warn("Unknown RequestType \""+requestType+"\" encounted");
 			break;
 		}
 		return httpResponse;
@@ -69,7 +70,7 @@ public class ApiCallHandler {
 			url = esbURL + urlSuffix;
 			httpResponse =apiESBCanvas(url);
 		}
-		M_log.debug("The Api call URL: " + url);
+		M_log.info("The Api call \"" + url+ "\" has StatusCode: "+httpResponse.getStatusLine().getStatusCode());
 		return httpResponse;
 	}
 	

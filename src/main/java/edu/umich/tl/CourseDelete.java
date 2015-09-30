@@ -48,7 +48,7 @@ public class CourseDelete {
 		if(canvasTermIdForSisTermId==null) {
 			M_log.error("Cannot find \"CanvasTermId\" for \"sisTermId = "+sisTermIdFromPropsFile+
 					"\" provided. Please correct the \"sis.term.id\" property provided from \"canvasCourseDelete.properties\" file.");
-			System.exit(0);
+			System.exit(1);
 		}
 		getUnpublishedCourseList(canvasTermIdForSisTermId,coursesForDelete,apiHandler,null);
 	}
@@ -98,7 +98,7 @@ public class CourseDelete {
 		int statusCode = httpResponse.getStatusLine().getStatusCode();
 		if(statusCode!=200) {
 			M_log.error(apiCallErrorHandler(httpResponse,"Enrollments_Terms",apiHandler));
-			System.exit(0);
+			System.exit(1);
 		}
 		HttpEntity entity = httpResponse.getEntity();
 		Map<String,Object> terms = new HashMap<String,Object>();
@@ -159,7 +159,7 @@ public class CourseDelete {
 		int statusCode = httpResponse.getStatusLine().getStatusCode();
 		if(statusCode!=200) {
 			M_log.error(apiCallErrorHandler(httpResponse,"Unpublished_Courses",apiHandler));
-			System.exit(0);
+			System.exit(1);
 		}
 		HttpEntity entity = httpResponse.getEntity();
 		List<HashMap<String, Object>> courseList=new ArrayList<HashMap<String, Object>>();
@@ -168,10 +168,10 @@ public class CourseDelete {
 			courseList = mapper.readValue(jsonResponseString,new TypeReference<List<Object>>(){});
 			for (HashMap<String, Object> course : courseList) {
 				Course aCourse=new Course()
-				.setId((Integer)course.get("id"))
-				.setCourseName((String)course.get("name"))
-				.setStartDate((String)course.get("start_at"))
-				.setEndDate((String)course.get("end_at"));
+						.setId((Integer)course.get("id"))
+						.setCourseName((String)course.get("name"))
+						.setStartDate((String)course.get("start_at"))
+						.setEndDate((String)course.get("end_at"));
 
 				coursesForDelete.addCourse(aCourse);
 			}
@@ -191,8 +191,10 @@ public class CourseDelete {
 	 * This helper method pull out the error message that is sent in case of error. Currently code distinguishes error
 	 * differently from directCanvas vs esbCanvas. This may not be always the case but ESB has Special Throttling message
 	 * than canvas
+	 * 
+	 * return errMsg=Api call for getting "Enrollments_Terms" has some errors with status code: 401: < Invalid access token. >
 	 */
-	private static String apiCallErrorHandler(HttpResponse httpResponse, String text, ApiCallHandler apiHandler) {
+	private static String apiCallErrorHandler(HttpResponse httpResponse, String apiText, ApiCallHandler apiHandler) {
 		HttpEntity entity = httpResponse.getEntity();
 		String jsonErrRes = null;
 		String errMsg=null;
@@ -203,10 +205,11 @@ public class CourseDelete {
 		} catch (IOException e) {
 			M_log.error("IOException occured apiCallErrorHandler() : ",e);
 		}
+		String errMsgWithStatus="Api call for getting \""+apiText+"\" has some errors with status code: "+httpResponse.getStatusLine().getStatusCode()+": < ";
 		if(apiHandler.getCanvasCall().equals(CanvasCallEnum.API_DIRECT_CANVAS)) {
-			errMsg=canvasDirectErrorResponse(jsonErrRes,text);
+			errMsg=canvasDirectErrorResponse(jsonErrRes,errMsgWithStatus);
 		}else if(apiHandler.getCanvasCall().equals(CanvasCallEnum.API_ESB_CANVAS)) {
-			errMsg=canvasEsbErrorResponse(jsonErrRes,text);
+			errMsg=canvasEsbErrorResponse(jsonErrRes,errMsgWithStatus);
 		}
 		return errMsg;
 	}
@@ -217,7 +220,7 @@ public class CourseDelete {
 	 */
 	private static String canvasDirectErrorResponse(String jsonErrRes, String apiText) {
 		StringBuilder errMsg = new StringBuilder();
-		errMsg.append("Api call for getting \""+apiText+"\" has some errors: < ");
+		errMsg.append(apiText);
 		ObjectMapper mapper = new ObjectMapper();
 		Map<String,Object> errorResponse = new HashMap<String,Object>();
 		try {
@@ -253,23 +256,23 @@ public class CourseDelete {
 		if (!response.containsHeader("Link")) {
 			return result;
 		}
-			Header[] linkHeaders = response.getHeaders("Link");
-			Header linkHeader = linkHeaders[0];
-			M_log.debug("Http response contains the following Link headers: " + linkHeader.getValue());
-			// look for the 'rel='next'' header value
-			String[] links = linkHeader.getValue().split(",");
-			for (int i = 0; i < links.length; i++) {
-				String[] linkPart = links[i].split(";");
-				if (linkPart[1].indexOf("rel=\"next\"") > 0) {
-					result = linkPart[0].trim();
-					break;
-				}
+		Header[] linkHeaders = response.getHeaders("Link");
+		Header linkHeader = linkHeaders[0];
+		M_log.debug("Http response contains the following Link headers: " + linkHeader.getValue());
+		// look for the 'rel='next'' header value
+		String[] links = linkHeader.getValue().split(",");
+		for (int i = 0; i < links.length; i++) {
+			String[] linkPart = links[i].split(";");
+			if (linkPart[1].indexOf("rel=\"next\"") > 0) {
+				result = linkPart[0].trim();
+				break;
 			}
-			if (result != null) {
-				if (result.startsWith("<")) {
-					result = result.substring(1, result.length() - 1);
-				}
+		}
+		if (result != null) {
+			if (result.startsWith("<")) {
+				result = result.substring(1, result.length() - 1);
 			}
+		}
 		M_log.debug("Returning next page header as: " + (result != null ? result : "NONE"));
 		return result;
 	}
