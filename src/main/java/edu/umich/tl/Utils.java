@@ -65,5 +65,8 @@ private static Log M_log = LogFactory.getLog(Utils.class);
 		return in;
 	}
 	
-
+	public static boolean isEmpty(String value) {
+		return (value == null) || (value.trim().equals(""));
+	}
+	
 }
