@@ -90,12 +90,12 @@ public class CourseDelete {
 		getTermsInfoFromProperties(properties);
 		checkForApiType(properties);
 	}
+	
 	/*
 	 * The Terms that needs for course deletion are listed in the properties file. Each term has 2 piece of information 
-	 * term1=2030;04/06/15, the sisTermCode and the endDate of that term. We will check if the current system date is
-	 * past the endDate then that term becomes eligible for deleting the unused/unpublished courses that are created 
-	 * as apart of auto-provisioning of courses in canvas
-	 * 
+	 * term1=2030;04/06/15, the sisTermCode and the endDate after which the courses should be considered for deletion.
+	 * We will check if the current system date is past the endDate then that term becomes eligible for deleting the 
+	 * unused/unpublished courses that are created as apart of auto-provisioning of courses in canvas
 	 */
 	private static void getTermsInfoFromProperties(Properties properties) {
 		M_log.debug("getTermsInfoFromProperties(): called");
@@ -106,19 +106,20 @@ public class CourseDelete {
 		}
 		int termCountInt = Integer.parseInt(termCount);
 		for(int i=1;i<=termCountInt;i++) {
-			String term = TERM+String.valueOf(i);
-			String termProperty = properties.getProperty(term);
-			if(Utils.isEmpty(termProperty)) {
-				M_log.error("The property \""+term+"\" don't seems to exist in \"canvasCourseDelete.properties\" "
+			String termPropertyName = TERM+String.valueOf(i);
+			String termPropertyValue = properties.getProperty(termPropertyName);
+			if(Utils.isEmpty(termPropertyValue)) {
+				M_log.error("The property \""+termPropertyName+"\" don't seems to exist in \"canvasCourseDelete.properties\" "
 						+ "please make sure all term properties are numerically aligned and number of properties is equal to \"term.count\" property value");
 				System.exit(1);
 			}
-			String[] termWithDate = termProperty.split(";");
+			String[] termWithDate = termPropertyValue.split(";");
 			DateTimeFormatter dtf = DateTimeFormat.forPattern("MM/dd/yyyy");
 			termsInfo.put(termWithDate[0],dtf.parseDateTime(termWithDate[1]));
 		}
 
 	}
+	
      /*
       * This function decide if the api call that need to be made is 'CanvasDirect' or
       * 'CanvasEsb'.we will pass this information to the 'ApiCallHandler'. The 'ApiCallHandler'
