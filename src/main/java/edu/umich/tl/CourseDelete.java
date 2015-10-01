@@ -73,7 +73,10 @@ public class CourseDelete {
 		 API_DIRECT_CANVAS, 
 		 API_ESB_CANVAS
 	}
-
+     /*
+      * exit code '1' implies something I expected could potentially go wrong
+      * http://stackoverflow.com/questions/2434592/difference-in-system-exit0-system-exit-1-system-exit1-in-java 
+      */
 	private static void readPropertiesFromFile(String[] args) {
 		M_log.debug("readPropertyFiles(): called");
 		Properties properties = null;
@@ -115,7 +118,10 @@ public class CourseDelete {
 			}
 			String[] termWithDate = termPropertyValue.split(";");
 			DateTimeFormatter dtf = DateTimeFormat.forPattern("MM/dd/yyyy");
-			termsInfo.put(termWithDate[0],dtf.parseDateTime(termWithDate[1]));
+			String sisTermId = termWithDate[0];
+			DateTime endDate = dtf.parseDateTime(termWithDate[1]);
+			M_log.info("EndDate from propertiesFile: "+endDate);
+			termsInfo.put(sisTermId,endDate);
 		}
 
 	}

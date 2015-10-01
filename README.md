@@ -9,7 +9,7 @@ One of the dangers with an auto-provisioning course approach is the proliferatio
 
 1. CourseDeleteUtility$ `mvn clean install`
 2. Add the following properties to `canvasCourseDelete.properties`. 
-  * Their can be many `term` property like `term1, term2...termN` and should be numerically aligned. 
+  * There can be many `term` property like `term1, term2...termN` and should be numerically aligned. The value to the term property formatted as `MM/dd/yyy`
   * The `term.count` property sets the number of term property lines that will be read from the file. This property should match the number of term properties defined.
     
     ```
