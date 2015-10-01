@@ -10,7 +10,7 @@ One of the dangers with an auto-provisioning course approach is the proliferatio
 1. CourseDeleteUtility$ `mvn clean install`
 2. Add the following 5 properties to `canvasCourseDelete.properties`. Their can be many `term` property like `term1, term2...termN` and should be numerically aligned. The `term.count` property should match the number of term properties defined.
     
-    
+    ```
     canvas.token=canvas token  
     canvas.url=target canvas server e.g. https://umich.test.instructure.com  
     use.test.url=true  
@@ -21,6 +21,7 @@ One of the dangers with an auto-provisioning course approach is the proliferatio
     .....
     termN=2010;01/04/2015
     term.count=N
+    ```
     
     
    
