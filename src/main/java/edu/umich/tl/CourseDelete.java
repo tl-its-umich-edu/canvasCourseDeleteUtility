@@ -16,6 +16,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.ParseException;
 import org.apache.http.util.EntityUtils;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
@@ -29,6 +30,10 @@ import edu.umich.tl.ApiCallHandler.RequestTypeEnum;
 
 
 public class CourseDelete {
+	private static final String MANUAL = "manual";
+	private static final String PUBLISHED = "published";
+	private static final String CONFERENCES = "conferences";
+	private static final String EVENTS = "events";
 	private static final String TERM = "term";
 	private static final String TERM_COUNT = "term.count";
 	private static final String CANVAS_URL = "canvas.url";
@@ -49,23 +54,26 @@ public class CourseDelete {
 		readPropertiesFromFile(args);
 		ApiCallHandler apiHandler=new ApiCallHandler(canvasCall);
 		ArrayList<Term> terms = getTerms(apiHandler);
-		ArrayList<String> previousTerms = getPreviousTerms(terms);
+		ArrayList<Term> previousTerms = getPreviousTerms(terms);
 		if(previousTerms.isEmpty()) {
 			M_log.error("No previous terms could be determined for courses deletion");
 			System.exit(1);
 		}
 		/*
-		 * Their may be multiple term courses that needs to be deleted for a cron job at that point in time. The Unpublished course list can be huge so the 
+		 * Their may be multiple term courses that needs 
+		 * to be deleted for a cron job at that point in time. The Unpublished course list can be huge so the 
 		 * design would be focusing on one term at a time and verifying for each course in a term if people exist, content added and activity happened for deleting the course. 
 		 *  
 		 */
-		for (String canvasTermId : previousTerms) {
+		for (Term previousTerm : previousTerms) {
 			CoursesForDelete coursesForDelete=new CoursesForDelete();
-			getUnpublishedCourseList(canvasTermId,coursesForDelete,apiHandler,null);
-			//Todo delete below line
-			M_log.debug("CourseList: "+coursesForDelete.getCourses().size()+" term: "+canvasTermId);
+			manageCoursesDeletion(previousTerm,coursesForDelete,apiHandler,null);
+			//Todo delete below lines
+			M_log.debug("CourseList: "+coursesForDelete.getCourses().size()+" term: "+previousTerm.getTermName());
+			M_log.debug("DeletedCourseList: "+coursesForDelete.getDeletedUnpublishedCourses().size()+" term: "+previousTerm.getTermName());
 		}
 	}
+
 
 	public enum CanvasCallEnum{
 		 API_DIRECT_CANVAS, 
@@ -144,17 +152,18 @@ public class CourseDelete {
 	private static ArrayList<Term> getTerms(ApiCallHandler apiHandler) {
 		M_log.debug("getTerms(): called");
 		ArrayList<Term> enrollmentTerms = new ArrayList<Term>();
-		HttpResponse httpResponse = apiHandler.getApiResponse(RequestTypeEnum.TERM, null,null);
+		HttpResponse httpResponse = apiHandler.getApiResponse(RequestTypeEnum.TERM, null,null,null);
 		ObjectMapper mapper = new ObjectMapper();
 		int statusCode = httpResponse.getStatusLine().getStatusCode();
 		if(statusCode!=200) {
-			M_log.error(apiCallErrorHandler(httpResponse,"Enrollments_Terms",apiHandler));
+			M_log.error(apiCallErrorHandler(httpResponse,RequestTypeEnum.TERM,apiHandler));
 			System.exit(1);
 		}
 		HttpEntity entity = httpResponse.getEntity();
 		Map<String,Object> terms = new HashMap<String,Object>();
 		try {
 			String jsonResponseString = EntityUtils.toString(entity);
+			
 			terms = mapper.readValue(jsonResponseString,new TypeReference<HashMap<String,Object>>(){});
 			ArrayList<HashMap<String, Object>> termsList = (ArrayList<HashMap<String, Object>>) terms.get("enrollment_terms");
 			for (HashMap<String, Object> eachTerm : termsList) {
@@ -169,69 +178,70 @@ public class CourseDelete {
 				} 
 			}
 		} catch (JsonParseException e) {
-			M_log.error("getPreviousTerms() has JsonParseException",e);
+			M_log.error("getTerms() has JsonParseException",e);
 		} catch (JsonMappingException e) {
-			M_log.error("getPreviousTerms() has JsonMappingException",e);
+			M_log.error("getTerms() has JsonMappingException",e);
 		} catch (IOException e) {
-			M_log.error("getPreviousTerms() has IOException",e);
+			M_log.error("getTerms() has IOException",e);
 		}catch (ParseException e) {
-			M_log.error("getPreviousTerms() has ParseException",e);
+			M_log.error("getTerms() has ParseException",e);
 		}
 		return enrollmentTerms;
 	}
 	/*
 	 * This method returns the List of terms for deletion of unused and unpublished courses. 
 	 */
-	private static ArrayList<String> getPreviousTerms(ArrayList<Term> terms) {
+	private static ArrayList<Term> getPreviousTerms(ArrayList<Term> terms) {
 		M_log.debug("getPreviousTerms(): called");
 		DateTime todaysDate = new DateTime();
 		M_log.info("Date the cron job ran: "+todaysDate);
-		ArrayList<String> listOftermsForCoursesDelete = new ArrayList<String>();
+		ArrayList<Term> termsForCoursesDelete = new ArrayList<Term>();
 		for (Entry<String, DateTime> term : termsInfo.entrySet()) {
 			if(term.getValue().isBefore(todaysDate)) {
-				String canvasTermIdForSisTermId = getCanvasTermIdForSisTermId(terms, term.getKey());
-				if(canvasTermIdForSisTermId==null) {
+				Term termForCourseDelete = getTheTermCanvasTermIdExistForProvidedSisId(terms, term.getKey());
+				if(termForCourseDelete==null) {
 					M_log.error("Cannot find \"CanvasTermId\" for \"sisTermId = "+term.getKey()+
 							"\" provided. Please correct the \"sis.term.id\" property provided from \"canvasCourseDelete.properties\" file.");
 					continue;
 				}
-				listOftermsForCoursesDelete.add(canvasTermIdForSisTermId);
+				termsForCoursesDelete.add(termForCourseDelete);
 			}
 
 		}
-		return listOftermsForCoursesDelete;
+		return termsForCoursesDelete;
 	}
     /*
-     * For Provided sis_term_id from the properties file 'canvasCourseDelete.properties' we try to
-     * get corresponding canvasTermId for making further APi call
+     * For provided sis_term_id from the properties file 'canvasCourseDelete.properties' we try to
+     * find if corresponding canvasTermId exist and return the term
      */
-	private static String getCanvasTermIdForSisTermId(ArrayList<Term> terms, String termSisId) {
-		M_log.debug("getCanvasTermIdForSisTermId(): called");
+	private static Term getTheTermCanvasTermIdExistForProvidedSisId(ArrayList<Term> terms, String termSisId) {
+		M_log.debug("getTheTermCanvasTermIdExistForProvidedSisId(): called");
 		for (Term term : terms) {
 			if (term.getSisTermId().equalsIgnoreCase(termSisId)) {
 				M_log.info("Found canvasTermId for provided SISTermId for the Term:  "+ term.getTermName());
-				return term.getCanvasTermId();
+				return term;
 			}
 		}
 		return null;
 	}
 	/*
-	 * Getting all the unpublished course list for a particular term from the ROOT account which is '1'. All the colleges, school of UOfM fall under ROOT.
-	 * This list is huge, canvas only provided 100 result set per api call so we need to get the rest of the courses info from the Pagination links.
+	 * Getting all the unpublished course list for a particular term from the ROOT account which is '1'. All the colleges, schools of UOfM fall under ROOT.
+	 * This list is huge, canvas only provided 100 result set per api call so we need to get the rest of the courses info from the Pagination links. For Each 
+	 * course we will be checking for courseEndDate/content/Activity to determine the course deletion.
 	 */
-	private static void getUnpublishedCourseList(String canvasTermIdForSisTermId, CoursesForDelete coursesForDelete, ApiCallHandler apiHandler, String url) {
-		M_log.debug("getUnpublishedCourseList(): Called");
+	private static void manageCoursesDeletion(Term previousTerm, CoursesForDelete coursesForDelete, ApiCallHandler apiHandler, String url) {
+		M_log.debug("manageCoursesDeletion(): Called");
 		HttpResponse httpResponse=null;
 		if(url!=null) {
 			//sending null for canvasTermId is fine since we get the url framed from the pagination object from the response header. 
-			httpResponse=apiHandler.getApiResponse(RequestTypeEnum.UNPUBLISHED_COURSE_LIST_PAGINATION_URL,null,url);
+			httpResponse=apiHandler.getApiResponse(RequestTypeEnum.UNPUBLISHED_COURSE_LIST_PAGINATION_URL,null,url,null);
 		}else {
-			httpResponse = apiHandler.getApiResponse(RequestTypeEnum.UNPUBLISHED_COURSE_LIST,canvasTermIdForSisTermId,url);
+			httpResponse = apiHandler.getApiResponse(RequestTypeEnum.UNPUBLISHED_COURSE_LIST,previousTerm.getCanvasTermId(),url,null);
 		}
 		ObjectMapper mapper = new ObjectMapper();
 		int statusCode = httpResponse.getStatusLine().getStatusCode();
 		if(statusCode!=200) {
-			M_log.error(apiCallErrorHandler(httpResponse,"Unpublished_Courses",apiHandler));
+			M_log.error(apiCallErrorHandler(httpResponse,RequestTypeEnum.UNPUBLISHED_COURSE_LIST,apiHandler));
 			System.exit(1);
 		}
 		HttpEntity entity = httpResponse.getEntity();
@@ -239,27 +249,260 @@ public class CourseDelete {
 		try {
 			String jsonResponseString = EntityUtils.toString(entity);
 			courseList = mapper.readValue(jsonResponseString,new TypeReference<List<Object>>(){});
+			if(courseList.isEmpty()) {
+				M_log.info("There are no unpublished courses for the term: "+previousTerm.getTermName());
+				return;
+			}
 			for (HashMap<String, Object> course : courseList) {
 				Course aCourse=new Course()
-						.setId((Integer)course.get("id"))
+						.setCourseId(String.valueOf((Integer)course.get("id")))
 						.setCourseName((String)course.get("name"))
-						.setStartDate((String)course.get("start_at"))
-						.setEndDate((String)course.get("end_at"));
+						.setStartDate(Utils.changeToDate((String)course.get("start_at")))
+						.setEndDate(Utils.changeToDate((String)course.get("end_at")));
 
 				coursesForDelete.addCourse(aCourse);
+				checkForEndDateContentActivityInACourse(aCourse, apiHandler,coursesForDelete);
 			}
 			String nextPageUrl = getNextPageUrl(httpResponse);
 			if(nextPageUrl!=null) {
-				getUnpublishedCourseList(canvasTermIdForSisTermId,coursesForDelete,apiHandler,nextPageUrl);
+				manageCoursesDeletion(previousTerm,coursesForDelete,apiHandler,nextPageUrl);
 			}
 		} catch (JsonParseException e1) {
-			M_log.error("JsonParseException occured getUnpublishedCourseList() : ",e1);
+			M_log.error("JsonParseException occured manageCoursesDeletion() : ",e1);
 		} catch(JsonMappingException e1) {
-			M_log.error("JsonMappingException occured getUnpublishedCourseList() : ",e1);
+			M_log.error("JsonMappingException occured manageCoursesDeletion() : ",e1);
 		}  catch (IOException e) {
-			M_log.error("IOException occured getUnpublishedCourseList( ):" ,e);
+			M_log.error("IOException occured manageCoursesDeletion( ):" ,e);
 		}
 	}
+	/*
+	 * For deletion of a course we need to check  1) courseEndDate with respect to current system date.If endDate is past the current system
+	 * date then course becomes eligible to for delete 2) after passing the endDate check we will be checking if the course has any content in it. We will be querying 
+	 * various canvas tool api's  to determine.3)If their is no content exist in the course check should be made for activity. if all these check show the course never been used 
+	 * then we will delete the course
+	 */
+	private static void checkForEndDateContentActivityInACourse(Course course,ApiCallHandler apiHandler,CoursesForDelete coursesForDelete) {
+		if(!isCourseEndDateIsPastTheCurrentDate(course)) {
+			if(!isTheirContentInCourse(course,apiHandler)) {
+				if(!isTheirActivityInCourse(course,apiHandler,null)) {
+					deleteTheCourse(course,apiHandler,coursesForDelete);
+				}
+			}
+		}
+		
+	}
+    /*
+     * Some time a course End date may be set after the term end date, in that cases we don't want to delete the course.
+     * Course end date can be null as well i.e it might not be set at all.
+     */
+	private static boolean isCourseEndDateIsPastTheCurrentDate(Course course) {
+		M_log.debug("isCourseEndDateIsPastTheCurrentDate: "+course.getCourseId()+" and endDate: "+course.getEndDate());
+		if(course.getEndDate()==null || course.getEndDate().isBefore(new DateTime(DateTimeZone.UTC))) {
+			M_log.debug("!!! Course eligible for Delete !!!" );
+			return false;
+		}
+		return true;
+	}
+
+	private static boolean isTheirContentInCourse(Course course, ApiCallHandler apiHandler) {
+		M_log.debug("isTheirContentInCourse: "+course.getCourseId());
+		boolean content=false;
+		if(areTheirFiles(course.getCourseId(),apiHandler)) {
+			M_log.debug("*** Files has content for Course: "+course.getCourseId());
+			content= true;
+		}else if(areTheirAssignments(course.getCourseId(),apiHandler)) {
+			M_log.debug("*** Assignments has content for Course: "+course.getCourseId());
+			content=true;
+		}else if(areTheirAnnouncements(course.getCourseId(),apiHandler)) {
+			M_log.debug("*** Announcements has content for Course: "+course.getCourseId());
+			content= true;
+		}else if(areTheirQuizzes(course.getCourseId(),apiHandler)) {
+			M_log.debug("*** Quizzes has content for Course: "+course.getCourseId());
+			content=true;
+		}else if(areTheirModules(course.getCourseId(),apiHandler)) {
+			M_log.debug("*** Modules has content for Course: "+course.getCourseId());
+			content=true;
+		}else if(areTheirGradeChanges(course.getCourseId(),apiHandler)) {
+			M_log.debug("*** GradeChanges has content for Course: "+course.getCourseId());
+			content=true;
+		}else if(areTheirConferences(course.getCourseId(),apiHandler)) {
+			M_log.debug("*** Conferences has content for Course: "+course.getCourseId());
+			content=true;
+		}else if(areTheirDiscussionTopics(course.getCourseId(),apiHandler)) {
+			M_log.debug("*** DiscussionTopics has content for Course: "+course.getCourseId());
+			content= true;
+		}else if(areTheirGroups(course.getCourseId(),apiHandler)) {
+			M_log.debug("*** Groups has content for Course: "+course.getCourseId());
+			content=true;
+		}else if(areTheirPages(course.getCourseId(),apiHandler)) {
+			M_log.debug("*** Pages has content for Course: "+course.getCourseId());
+			content=true;
+		}else if(areTheirExternalToolsAdded(course.getCourseId(),apiHandler)) {
+			M_log.debug("*** ExternalTools has content for Course: "+course.getCourseId());
+			content=true;
+		}
+		return content;
+	}
+
+	private static boolean areTheirAssignments(String courseId,ApiCallHandler apiHandler) {
+		List<HashMap<String, Object>> assignmentRes = apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.ASSIGNMENT);
+		return checkResponseState(assignmentRes);
+	}
+	private static boolean areTheirQuizzes(String courseId, ApiCallHandler apiHandler) {
+		List<HashMap<String, Object>> quizzesRes = apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.QUIZZES);
+		return checkResponseState(quizzesRes);
+	}
+	private static boolean areTheirAnnouncements(String courseId,ApiCallHandler apiHandler) {
+		List<HashMap<String, Object>> announcementRes = apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.ANNOUNCEMENT);
+		return checkResponseState(announcementRes);
+	}
+	private static boolean areTheirDiscussionTopics(String courseId, ApiCallHandler apiHandler) {
+		List<HashMap<String, Object>> discussionsRes = apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.DISCUSSION_TOPICS);
+		return checkResponseState(discussionsRes);
+	}
+	private static boolean areTheirFiles(String courseId, ApiCallHandler apiHandler) {
+		List<HashMap<String, Object>> filesRes = apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.FILES);
+		return checkResponseState(filesRes);
+	}
+	private static boolean areTheirGroups(String courseId, ApiCallHandler apiHandler) {
+		List<HashMap<String, Object>> groupsRes = apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.GROUPS);
+		return checkResponseState(groupsRes);
+	}
+	private static boolean areTheirModules(String courseId, ApiCallHandler apiHandler) {
+		List<HashMap<String, Object>> modulesRes = apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.MODULES);
+		return checkResponseState(modulesRes);
+	}
+	private static boolean areTheirPages(String courseId, ApiCallHandler apiHandler) {
+		List<HashMap<String, Object>> pagesRes = apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.PAGES);
+		return checkResponseState(pagesRes);
+	}
+	private static boolean areTheirExternalToolsAdded(String courseId, ApiCallHandler apiHandler) {
+		List<HashMap<String, Object>> externalTools = apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.EXTERNAL_TOOLS);
+		return checkResponseState(externalTools);
+	}
+	private static boolean areTheirGradeChanges(String courseId, ApiCallHandler apiHandler) {
+		List<HashMap<String, Object>> gradeChanges = apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.GRADE_CHANGES);
+		return checkResponseState(gradeChanges);
+	}
+	private static boolean areTheirConferences(String courseId, ApiCallHandler apiHandler) {
+		List<HashMap<String, Object>> conferenceRes = apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.CONFERENCE);
+		return checkResponseState(conferenceRes);
+	}
+
+
+	private static List<HashMap<String,Object>> apiResponseTemplate(String courseId, ApiCallHandler apiHandler,RequestTypeEnum requestType) {
+		HttpResponse httpResponse = apiHandler.getApiResponse(requestType, null, null, courseId);
+		String jsonResponseString = null;
+		ObjectMapper mapper = new ObjectMapper();
+		List<HashMap<String, Object>> responseList=null;
+		int statusCode = httpResponse.getStatusLine().getStatusCode();
+		if(statusCode!=200) {
+			M_log.error(apiCallErrorHandler(httpResponse,requestType,apiHandler));
+			return responseList;
+		}
+		HttpEntity entity = httpResponse.getEntity();
+		try {
+			jsonResponseString = EntityUtils.toString(entity);
+			if(requestType.equals(RequestTypeEnum.CONFERENCE)) {
+				responseList = responsePropertyLookUp(jsonResponseString, CONFERENCES);
+				return responseList;
+			}
+			if(requestType.equals(RequestTypeEnum.GRADE_CHANGES)) {
+				responseList = responsePropertyLookUp(jsonResponseString, EVENTS);
+				return responseList;
+			}
+			responseList = mapper.readValue(jsonResponseString,new TypeReference<List<Object>>(){});
+		} catch (JsonParseException e1) {
+			M_log.error("JsonParseException occured apiResponseTemplate() : ",e1);
+		} catch(JsonMappingException e1) {
+			M_log.error("JsonMappingException occured apiResponseTemplate() : ",e1);
+		}  catch (IOException e) {
+			M_log.error("IOException occured apiResponseTemplate( ):" ,e);
+		}catch (ParseException e) {
+			M_log.error("ParseException occured apiResponseTemplate() : ",e);
+		} 
+		return responseList;
+	}
+	
+	private static boolean checkResponseState(List<HashMap<String, Object>> response) {
+		Boolean resState =false;
+		//response=null is a error condition so we don't want to delete the course just skip the course from the delete determination logic.  
+		if(response==null || (!response.isEmpty())) {
+			resState= true;
+		}else {
+			resState= false;
+		}
+		return resState;
+	}
+
+	private static List<HashMap<String, Object>> responsePropertyLookUp(String jsonResponseString, String property)
+			throws IOException, JsonParseException, JsonMappingException {
+		ObjectMapper mapper = new ObjectMapper();
+		List<HashMap<String, Object>> responseList;
+		Map<String,Object> resMap = new HashMap<String,Object>();
+		resMap = mapper.readValue(jsonResponseString,new TypeReference<HashMap<String,Object>>(){});
+		responseList = (List<HashMap<String, Object>>) resMap.get(property);
+		return responseList;
+	}
+    /*
+     * This check for activity in a course we are looking for the "manually published" events in the past. Please note that the course we are checking this event
+     * is an unpublished course. We don't want to delete "manually published" course in the past as this indicates that the course is still in interest to an instructor.  
+     */
+	private static boolean isTheirActivityInCourse(Course course, ApiCallHandler apiHandler,String paginationUrl) {
+		M_log.debug("isTheirActivityInCourse: "+course.getCourseId());
+		HttpResponse httpResponse=null;
+		if(paginationUrl==null) {
+			httpResponse = apiHandler.getApiResponse(RequestTypeEnum.COURSE_AUDIT_LOGS, null, null, course.getCourseId());
+		}else {
+			httpResponse = apiHandler.getApiResponse(RequestTypeEnum.COURSE_AUDIT_LOGS_PAGINALTION_URL, null, paginationUrl, course.getCourseId());
+		}
+		String jsonResponseString = null;
+		List<HashMap<String, Object>> eventList=null;
+		int statusCode = httpResponse.getStatusLine().getStatusCode();
+		if(statusCode!=200) {
+			M_log.error(apiCallErrorHandler(httpResponse,RequestTypeEnum.COURSE_AUDIT_LOGS,apiHandler));
+			return true;
+		}
+		HttpEntity entity = httpResponse.getEntity();
+		try {
+			jsonResponseString = EntityUtils.toString(entity);
+			eventList = responsePropertyLookUp(jsonResponseString, EVENTS);
+			for (HashMap<String, Object> event : eventList) {
+				String eventType = (String)event.get("event_type");
+				String eventSource = (String) event.get("event_source");
+				// This is a case where some time in the past this course got published so we do not want to delete the course.  
+				if(eventType.equals(PUBLISHED)&&eventSource.equals(MANUAL)) {
+					return true;
+				}
+			}
+			String nextPageUrl = getNextPageUrl(httpResponse);
+			if(nextPageUrl!=null) {
+				isTheirActivityInCourse(course,apiHandler,nextPageUrl);
+			}
+		} catch (JsonParseException e) {
+			M_log.error("JsonParseException occured isTheirActivityInCourse() : ",e);
+		} catch (JsonMappingException e) {
+			M_log.error("JsonMappingException occured isTheirActivityInCourse() : ",e);
+		} catch (ParseException e) {
+			M_log.error("ParseException occured isTheirActivityInCourse() : ",e);
+		} catch (IOException e) {
+			M_log.error("IOException occured isTheirActivityInCourse() : ",e);
+		}
+		return false;
+	}
+	
+	
+	private static void deleteTheCourse(Course course, ApiCallHandler apiHandler,CoursesForDelete coursesForDelete) {
+		HttpResponse httpResponse = apiHandler.getApiResponse(RequestTypeEnum.COURSE_DELETE, null, null, course.getCourseId());
+		int statusCode = httpResponse.getStatusLine().getStatusCode();
+		if(statusCode!=200) {
+			M_log.error(apiCallErrorHandler(httpResponse,RequestTypeEnum.COURSE_DELETE,apiHandler));
+			return;
+		}
+		M_log.debug("***** Course Deleted ***** "+course.getCourseId());	
+		coursesForDelete.addDeletedCourse(course);
+	}
+
 	/*
 	 * This helper method pull out the error message that is sent in case of error. Currently code distinguishes error
 	 * differently from directCanvas vs esbCanvas. This may not be always the case but ESB has Special Throttling message
@@ -267,7 +510,7 @@ public class CourseDelete {
 	 * 
 	 * return errMsg=Api call for getting "Enrollments_Terms" has some errors with status code: 401: < Invalid access token. >
 	 */
-	private static String apiCallErrorHandler(HttpResponse httpResponse, String apiText, ApiCallHandler apiHandler) {
+	private static String apiCallErrorHandler(HttpResponse httpResponse, RequestTypeEnum apiText, ApiCallHandler apiHandler) {
 		HttpEntity entity = httpResponse.getEntity();
 		String jsonErrRes = null;
 		String errMsg=null;

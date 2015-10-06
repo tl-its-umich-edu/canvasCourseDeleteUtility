@@ -1,16 +1,18 @@
 package edu.umich.tl;
 
+import org.joda.time.DateTime;
+
 public class Course {
-	private int id;
+	private String courseId;
 	private String courseName;
-	private String startDate;
-	private String endDate;
+	private DateTime startDate;
+	private DateTime endDate;
 	
-	public int getId() {
-		return id;
+	public String getCourseId() {
+		return courseId;
 	}
-	public Course setId(int id) {
-		this.id = id;
+	public Course setCourseId(String courseId) {
+		this.courseId = courseId;
 		return this;
 	}
 	public String getCourseName() {
@@ -20,17 +22,17 @@ public class Course {
 		this.courseName = courseName;
 		return this;
 	}
-	public String getStartDate() {
+	public DateTime getStartDate() {
 		return startDate;
 	}
-	public Course setStartDate(String startDate) {
+	public Course setStartDate(DateTime startDate) {
 		this.startDate = startDate;
 		return this;
 	}
-	public String getEndDate() {
+	public DateTime getEndDate() {
 		return endDate;
 	}
-	public Course setEndDate(String endDate) {
+	public Course setEndDate(DateTime endDate) {
 		this.endDate = endDate;
 		return this;
 	}

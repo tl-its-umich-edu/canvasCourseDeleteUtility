@@ -8,6 +8,8 @@ import java.util.Properties;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 
 
 
@@ -67,6 +69,14 @@ private static Log M_log = LogFactory.getLog(Utils.class);
 	
 	public static boolean isEmpty(String value) {
 		return (value == null) || (value.trim().equals(""));
+	}
+	// iso8601String= "2015-01-08T23:00:00Z"
+	public static DateTime changeToDate(String iso8601String) {
+		DateTime dateTime_Utc = null;
+		if(iso8601String!=null) {
+		 dateTime_Utc = new DateTime( iso8601String , DateTimeZone.UTC );
+		}
+		return dateTime_Utc;
 	}
 	
 }
