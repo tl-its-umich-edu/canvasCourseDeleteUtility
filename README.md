@@ -8,7 +8,9 @@ One of the dangers with an auto-provisioning course approach is the proliferatio
 ## Build Directions
 
 1. CourseDeleteUtility$ `mvn clean install`
-2. Add the following 5 properties to coursereport.properties: 
+2. Add the following properties to `canvasCourseDelete.properties`. 
+  * There can be many `term` property like `term1, term2...termN` and should be numerically aligned. The value to the term property formatted as `MM/dd/yyy`
+  * The `term.count` property sets the number of term property lines that will be read from the file. This property should match the number of term properties defined.
     
     ```
     canvas.token=canvas token  
@@ -16,9 +18,16 @@ One of the dangers with an auto-provisioning course approach is the proliferatio
     use.test.url=true  
     esb.url=esb server e.g. https://api-qa.its.umich.edu:9443/store/  
     api.call.type=1 or 2  1 means canvas call 2 means canvas call via ESB
+    term1=1990;08/12/2014
+    term2=2000;08/12/2014
+    .....
+    termN=2010;01/04/2015
+    term.count=N
     ```
+    
+    
    
 ## Run Directions
-1. `java -jar target/canvasCourseDeleteUtility.jar file:/<path>/canvasCourseDelete.properties`
+1. `java -jar canvasCourseDeleteUtility.jar file:/<path>/canvasCourseDelete.properties`
   
  
