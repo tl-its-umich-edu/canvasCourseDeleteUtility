@@ -2,13 +2,11 @@ package edu.umich.tl;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
-import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -108,6 +106,7 @@ public class CourseDelete {
 			System.exit(1);
 		}
 		int termCountInt = Integer.parseInt(termCount);
+		DateTimeFormatter dateTimeFormatter = DateTimeFormat.forPattern("MM/dd/yyyy");
 		for(int i=1;i<=termCountInt;i++) {
 			String termPropertyName = TERM+String.valueOf(i);
 			String termPropertyValue = properties.getProperty(termPropertyName);
@@ -117,9 +116,8 @@ public class CourseDelete {
 				System.exit(1);
 			}
 			String[] termWithDate = termPropertyValue.split(";");
-			DateTimeFormatter dtf = DateTimeFormat.forPattern("MM/dd/yyyy");
 			String sisTermId = termWithDate[0];
-			DateTime endDate = dtf.parseDateTime(termWithDate[1]);
+			DateTime endDate = dateTimeFormatter.parseDateTime(termWithDate[1]);
 			M_log.info("EndDate from propertiesFile: "+endDate);
 			termsInfo.put(sisTermId,endDate);
 		}

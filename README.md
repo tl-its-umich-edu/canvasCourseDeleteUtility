@@ -28,6 +28,6 @@ One of the dangers with an auto-provisioning course approach is the proliferatio
     
    
 ## Run Directions
-1. `java -jar target/canvasCourseDeleteUtility.jar file:/<path>/canvasCourseDelete.properties`
+1. `java -jar canvasCourseDeleteUtility.jar file:/<path>/canvasCourseDelete.properties`
   
  
