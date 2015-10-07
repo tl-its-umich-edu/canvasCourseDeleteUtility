@@ -7,6 +7,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
+import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
@@ -159,30 +160,28 @@ public class ApiCallHandler {
 	private HttpResponse apiDirectCanvas(String url, String httpReqType) {
 		HttpUriRequest clientRequest = null;
 		HttpResponse httpResponse=null;
+		if(httpReqType.equals(GET)) {
+			clientRequest = new HttpGet(url);
+		}else if (httpReqType.equals(DELETE)) {
+			clientRequest = new HttpDelete(url);
+		}
+		HttpClient client = new DefaultHttpClient();
+		final ArrayList<NameValuePair> nameValues = new ArrayList<NameValuePair>();
+		nameValues.add(new BasicNameValuePair("Authorization", "Bearer" + " " + canvasToken));
+		nameValues.add(new BasicNameValuePair("content-type", "application/json"));
+		for (final NameValuePair h : nameValues) {
+			clientRequest.addHeader(h.getName(), h.getValue());
+		}
+		Stopwatch stopwatch = Stopwatch.createStarted();
 		try {
-			if(httpReqType.equals(GET)) {
-				clientRequest = new HttpGet(url);
-			}else if (httpReqType.equals(DELETE)) {
-				clientRequest = new HttpDelete(url);
-			}
-			HttpClient client = new DefaultHttpClient();
-			final ArrayList<NameValuePair> nameValues = new ArrayList<NameValuePair>();
-			nameValues.add(new BasicNameValuePair("Authorization", "Bearer" + " " + canvasToken));
-			nameValues.add(new BasicNameValuePair("content-type", "application/json"));
-			for (final NameValuePair h : nameValues) {
-				clientRequest.addHeader(h.getName(), h.getValue());
-			}
-			try {
-				Stopwatch stopwatch = Stopwatch.createStarted();
-				httpResponse = client.execute(clientRequest);
-				stopwatch.stop();
-				M_log.info("The Api call \"" + url+ "\" took \""+stopwatch+"\" and ResponseCode: "+httpResponse.getStatusLine().getStatusCode());
-
-			} catch (IOException e) {
-				M_log.error("Canvas API call did not complete successfully", e);
-			}
-		} catch (Exception e) {
-			M_log.error("GET request has some exceptions", e);
+			httpResponse = client.execute(clientRequest);
+		} catch (ClientProtocolException e) {
+			M_log.error("Canvas API call did not complete successfully has some Protocol Exceptions", e);
+		} catch (IOException e) {
+			M_log.error("Canvas API call did not complete successfully has some IOExceptions", e);
+		}finally {
+			stopwatch.stop();
+			M_log.info("The Api call \"" + url+ "\" took \""+stopwatch+"\" and ResponseCode: "+httpResponse.getStatusLine().getStatusCode());
 		}
 		return httpResponse;
 	}

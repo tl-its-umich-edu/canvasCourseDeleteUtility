@@ -153,7 +153,7 @@ public class CourseDelete {
 		M_log.debug("getTerms(): called");
 		ArrayList<Term> enrollmentTerms = new ArrayList<Term>();
 		HttpResponse httpResponse = apiHandler.getApiResponse(RequestTypeEnum.TERM, null,null,null);
-		ObjectMapper mapper = new ObjectMapper();
+		httpResponseNullCheck(httpResponse,RequestTypeEnum.TERM);
 		int statusCode = httpResponse.getStatusLine().getStatusCode();
 		if(statusCode!=200) {
 			M_log.error(apiCallErrorHandler(httpResponse,RequestTypeEnum.TERM,apiHandler));
@@ -161,6 +161,7 @@ public class CourseDelete {
 		}
 		HttpEntity entity = httpResponse.getEntity();
 		Map<String,Object> terms = new HashMap<String,Object>();
+		ObjectMapper mapper = new ObjectMapper();
 		try {
 			String jsonResponseString = EntityUtils.toString(entity);
 			
@@ -188,6 +189,7 @@ public class CourseDelete {
 		}
 		return enrollmentTerms;
 	}
+
 	/*
 	 * This method returns the List of terms for deletion of unused and unpublished courses. 
 	 */
@@ -238,7 +240,7 @@ public class CourseDelete {
 		}else {
 			httpResponse = apiHandler.getApiResponse(RequestTypeEnum.UNPUBLISHED_COURSE_LIST,previousTerm.getCanvasTermId(),url,null);
 		}
-		ObjectMapper mapper = new ObjectMapper();
+		httpResponseNullCheck(httpResponse,RequestTypeEnum.UNPUBLISHED_COURSE_LIST);
 		int statusCode = httpResponse.getStatusLine().getStatusCode();
 		if(statusCode!=200) {
 			M_log.error(apiCallErrorHandler(httpResponse,RequestTypeEnum.UNPUBLISHED_COURSE_LIST,apiHandler));
@@ -246,6 +248,7 @@ public class CourseDelete {
 		}
 		HttpEntity entity = httpResponse.getEntity();
 		List<HashMap<String, Object>> courseList=new ArrayList<HashMap<String, Object>>();
+		ObjectMapper mapper = new ObjectMapper();
 		try {
 			String jsonResponseString = EntityUtils.toString(entity);
 			courseList = mapper.readValue(jsonResponseString,new TypeReference<List<Object>>(){});
@@ -283,8 +286,8 @@ public class CourseDelete {
 	 */
 	private static void checkForEndDateContentActivityInACourse(Course course,ApiCallHandler apiHandler,CoursesForDelete coursesForDelete) {
 		if(!isCourseEndDateIsPastTheCurrentDate(course)) {
-			if(!isTheirContentInCourse(course,apiHandler)) {
-				if(!isTheirActivityInCourse(course,apiHandler,null)) {
+			if(!isThereContentInCourse(course,apiHandler)) {
+				if(!isThereActivityInCourse(course,apiHandler,null)) {
 					deleteTheCourse(course,apiHandler,coursesForDelete);
 				}
 			}
@@ -304,87 +307,96 @@ public class CourseDelete {
 		return true;
 	}
 
-	private static boolean isTheirContentInCourse(Course course, ApiCallHandler apiHandler) {
+	private static boolean isThereContentInCourse(Course course, ApiCallHandler apiHandler) {
 		M_log.debug("isTheirContentInCourse: "+course.getCourseId());
-		boolean content=false;
-		if(areTheirFiles(course.getCourseId(),apiHandler)) {
+		if(areThereFiles(course.getCourseId(),apiHandler)) {
 			M_log.debug("*** Files has content for Course: "+course.getCourseId());
-			content= true;
-		}else if(areTheirAssignments(course.getCourseId(),apiHandler)) {
-			M_log.debug("*** Assignments has content for Course: "+course.getCourseId());
-			content=true;
-		}else if(areTheirAnnouncements(course.getCourseId(),apiHandler)) {
-			M_log.debug("*** Announcements has content for Course: "+course.getCourseId());
-			content= true;
-		}else if(areTheirQuizzes(course.getCourseId(),apiHandler)) {
-			M_log.debug("*** Quizzes has content for Course: "+course.getCourseId());
-			content=true;
-		}else if(areTheirModules(course.getCourseId(),apiHandler)) {
-			M_log.debug("*** Modules has content for Course: "+course.getCourseId());
-			content=true;
-		}else if(areTheirGradeChanges(course.getCourseId(),apiHandler)) {
-			M_log.debug("*** GradeChanges has content for Course: "+course.getCourseId());
-			content=true;
-		}else if(areTheirConferences(course.getCourseId(),apiHandler)) {
-			M_log.debug("*** Conferences has content for Course: "+course.getCourseId());
-			content=true;
-		}else if(areTheirDiscussionTopics(course.getCourseId(),apiHandler)) {
-			M_log.debug("*** DiscussionTopics has content for Course: "+course.getCourseId());
-			content= true;
-		}else if(areTheirGroups(course.getCourseId(),apiHandler)) {
-			M_log.debug("*** Groups has content for Course: "+course.getCourseId());
-			content=true;
-		}else if(areTheirPages(course.getCourseId(),apiHandler)) {
-			M_log.debug("*** Pages has content for Course: "+course.getCourseId());
-			content=true;
-		}else if(areTheirExternalToolsAdded(course.getCourseId(),apiHandler)) {
-			M_log.debug("*** ExternalTools has content for Course: "+course.getCourseId());
-			content=true;
+			return true;
 		}
-		return content;
+		if(areThereAssignments(course.getCourseId(),apiHandler)) {
+			M_log.debug("*** Assignments has content for Course: "+course.getCourseId());
+			return true;
+		}
+		if(areThereAnnouncements(course.getCourseId(),apiHandler)) {
+			M_log.debug("*** Announcements has content for Course: "+course.getCourseId());
+			return true;
+		}
+		if(areThereQuizzes(course.getCourseId(),apiHandler)) {
+			M_log.debug("*** Quizzes has content for Course: "+course.getCourseId());
+			return true;
+		} 
+		if(areThereModules(course.getCourseId(),apiHandler)) {
+			M_log.debug("*** Modules has content for Course: "+course.getCourseId());
+			return true;
+		} 
+		if(areThereGradeChanges(course.getCourseId(),apiHandler)) {
+			M_log.debug("*** GradeChanges has content for Course: "+course.getCourseId());
+			return true;
+		} 
+		if(areThereConferences(course.getCourseId(),apiHandler)) {
+			M_log.debug("*** Conferences has content for Course: "+course.getCourseId());
+			return true;
+		} 
+		if(areThereDiscussionTopics(course.getCourseId(),apiHandler)) {
+			M_log.debug("*** DiscussionTopics has content for Course: "+course.getCourseId());
+			return true;
+		} 
+		if(areThereGroups(course.getCourseId(),apiHandler)) {
+			M_log.debug("*** Groups has content for Course: "+course.getCourseId());
+			return true;
+		} 
+		if(areTherePages(course.getCourseId(),apiHandler)) {
+			M_log.debug("*** Pages has content for Course: "+course.getCourseId());
+			return true;
+		}
+		if(areThereExternalToolsAdded(course.getCourseId(),apiHandler)) {
+			M_log.debug("*** ExternalTools has content for Course: "+course.getCourseId());
+			return true;
+		}
+		return false;
 	}
 
-	private static boolean areTheirAssignments(String courseId,ApiCallHandler apiHandler) {
+	private static boolean areThereAssignments(String courseId,ApiCallHandler apiHandler) {
 		List<HashMap<String, Object>> assignmentRes = apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.ASSIGNMENT);
 		return checkResponseState(assignmentRes);
 	}
-	private static boolean areTheirQuizzes(String courseId, ApiCallHandler apiHandler) {
+	private static boolean areThereQuizzes(String courseId, ApiCallHandler apiHandler) {
 		List<HashMap<String, Object>> quizzesRes = apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.QUIZZES);
 		return checkResponseState(quizzesRes);
 	}
-	private static boolean areTheirAnnouncements(String courseId,ApiCallHandler apiHandler) {
+	private static boolean areThereAnnouncements(String courseId,ApiCallHandler apiHandler) {
 		List<HashMap<String, Object>> announcementRes = apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.ANNOUNCEMENT);
 		return checkResponseState(announcementRes);
 	}
-	private static boolean areTheirDiscussionTopics(String courseId, ApiCallHandler apiHandler) {
+	private static boolean areThereDiscussionTopics(String courseId, ApiCallHandler apiHandler) {
 		List<HashMap<String, Object>> discussionsRes = apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.DISCUSSION_TOPICS);
 		return checkResponseState(discussionsRes);
 	}
-	private static boolean areTheirFiles(String courseId, ApiCallHandler apiHandler) {
+	private static boolean areThereFiles(String courseId, ApiCallHandler apiHandler) {
 		List<HashMap<String, Object>> filesRes = apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.FILES);
 		return checkResponseState(filesRes);
 	}
-	private static boolean areTheirGroups(String courseId, ApiCallHandler apiHandler) {
+	private static boolean areThereGroups(String courseId, ApiCallHandler apiHandler) {
 		List<HashMap<String, Object>> groupsRes = apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.GROUPS);
 		return checkResponseState(groupsRes);
 	}
-	private static boolean areTheirModules(String courseId, ApiCallHandler apiHandler) {
+	private static boolean areThereModules(String courseId, ApiCallHandler apiHandler) {
 		List<HashMap<String, Object>> modulesRes = apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.MODULES);
 		return checkResponseState(modulesRes);
 	}
-	private static boolean areTheirPages(String courseId, ApiCallHandler apiHandler) {
+	private static boolean areTherePages(String courseId, ApiCallHandler apiHandler) {
 		List<HashMap<String, Object>> pagesRes = apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.PAGES);
 		return checkResponseState(pagesRes);
 	}
-	private static boolean areTheirExternalToolsAdded(String courseId, ApiCallHandler apiHandler) {
+	private static boolean areThereExternalToolsAdded(String courseId, ApiCallHandler apiHandler) {
 		List<HashMap<String, Object>> externalTools = apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.EXTERNAL_TOOLS);
 		return checkResponseState(externalTools);
 	}
-	private static boolean areTheirGradeChanges(String courseId, ApiCallHandler apiHandler) {
+	private static boolean areThereGradeChanges(String courseId, ApiCallHandler apiHandler) {
 		List<HashMap<String, Object>> gradeChanges = apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.GRADE_CHANGES);
 		return checkResponseState(gradeChanges);
 	}
-	private static boolean areTheirConferences(String courseId, ApiCallHandler apiHandler) {
+	private static boolean areThereConferences(String courseId, ApiCallHandler apiHandler) {
 		List<HashMap<String, Object>> conferenceRes = apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.CONFERENCE);
 		return checkResponseState(conferenceRes);
 	}
@@ -392,14 +404,15 @@ public class CourseDelete {
 
 	private static List<HashMap<String,Object>> apiResponseTemplate(String courseId, ApiCallHandler apiHandler,RequestTypeEnum requestType) {
 		HttpResponse httpResponse = apiHandler.getApiResponse(requestType, null, null, courseId);
-		String jsonResponseString = null;
-		ObjectMapper mapper = new ObjectMapper();
+		httpResponseNullCheck(httpResponse,requestType);
 		List<HashMap<String, Object>> responseList=null;
 		int statusCode = httpResponse.getStatusLine().getStatusCode();
 		if(statusCode!=200) {
 			M_log.error(apiCallErrorHandler(httpResponse,requestType,apiHandler));
 			return responseList;
 		}
+		String jsonResponseString = null;
+		ObjectMapper mapper = new ObjectMapper();
 		HttpEntity entity = httpResponse.getEntity();
 		try {
 			jsonResponseString = EntityUtils.toString(entity);
@@ -425,14 +438,11 @@ public class CourseDelete {
 	}
 	
 	private static boolean checkResponseState(List<HashMap<String, Object>> response) {
-		Boolean resState =false;
 		//response=null is a error condition so we don't want to delete the course just skip the course from the delete determination logic.  
 		if(response==null || (!response.isEmpty())) {
-			resState= true;
-		}else {
-			resState= false;
+			return true;
 		}
-		return resState;
+		return false;
 	}
 
 	private static List<HashMap<String, Object>> responsePropertyLookUp(String jsonResponseString, String property)
@@ -448,7 +458,7 @@ public class CourseDelete {
      * This check for activity in a course we are looking for the "manually published" events in the past. Please note that the course we are checking this event
      * is an unpublished course. We don't want to delete "manually published" course in the past as this indicates that the course is still in interest to an instructor.  
      */
-	private static boolean isTheirActivityInCourse(Course course, ApiCallHandler apiHandler,String paginationUrl) {
+	private static boolean isThereActivityInCourse(Course course, ApiCallHandler apiHandler,String paginationUrl) {
 		M_log.debug("isTheirActivityInCourse: "+course.getCourseId());
 		HttpResponse httpResponse=null;
 		if(paginationUrl==null) {
@@ -456,6 +466,7 @@ public class CourseDelete {
 		}else {
 			httpResponse = apiHandler.getApiResponse(RequestTypeEnum.COURSE_AUDIT_LOGS_PAGINALTION_URL, null, paginationUrl, course.getCourseId());
 		}
+		httpResponseNullCheck(httpResponse,RequestTypeEnum.COURSE_AUDIT_LOGS);
 		String jsonResponseString = null;
 		List<HashMap<String, Object>> eventList=null;
 		int statusCode = httpResponse.getStatusLine().getStatusCode();
@@ -477,7 +488,7 @@ public class CourseDelete {
 			}
 			String nextPageUrl = getNextPageUrl(httpResponse);
 			if(nextPageUrl!=null) {
-				isTheirActivityInCourse(course,apiHandler,nextPageUrl);
+				isThereActivityInCourse(course,apiHandler,nextPageUrl);
 			}
 		} catch (JsonParseException e) {
 			M_log.error("JsonParseException occured isTheirActivityInCourse() : ",e);
@@ -494,6 +505,7 @@ public class CourseDelete {
 	
 	private static void deleteTheCourse(Course course, ApiCallHandler apiHandler,CoursesForDelete coursesForDelete) {
 		HttpResponse httpResponse = apiHandler.getApiResponse(RequestTypeEnum.COURSE_DELETE, null, null, course.getCourseId());
+		httpResponseNullCheck(httpResponse,RequestTypeEnum.COURSE_DELETE);
 		int statusCode = httpResponse.getStatusLine().getStatusCode();
 		if(statusCode!=200) {
 			M_log.error(apiCallErrorHandler(httpResponse,RequestTypeEnum.COURSE_DELETE,apiHandler));
@@ -501,6 +513,13 @@ public class CourseDelete {
 		}
 		M_log.debug("***** Course Deleted ***** "+course.getCourseId());	
 		coursesForDelete.addDeletedCourse(course);
+	}
+	
+	private static void httpResponseNullCheck(HttpResponse httpResponse, RequestTypeEnum requestType) {
+		if(httpResponse==null) {
+			M_log.error("Api call"+requestType+" is not successfull");
+			System.exit(1);
+		}
 	}
 
 	/*
