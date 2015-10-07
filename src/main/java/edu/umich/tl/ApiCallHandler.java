@@ -47,88 +47,79 @@ public class ApiCallHandler {
 	}
 
 	public HttpResponse getApiResponse(RequestTypeEnum requestType, String canvasTermIdForSisTermId, String url,String courseId) {
-		HttpResponse httpResponse = null;
-		String urlSuffix;
+		String urlSuffix = null;
+		boolean shouldAddPrefix=true;
+		String request=GET;
 		switch (requestType) {
 		case TERM:
 			urlSuffix=API_VERSION+ACCOUNTS+"/terms?"+PER_PAGE;
-			httpResponse = urlConstructorAndCanvasCallManager(urlSuffix, true, GET);
 			break;
 		case UNPUBLISHED_COURSE_LIST:
 			urlSuffix=API_VERSION+ACCOUNTS+"/courses?enrollment_term_id="+canvasTermIdForSisTermId+"&published=false&"+PER_PAGE;
-			httpResponse = urlConstructorAndCanvasCallManager(urlSuffix, true, GET);
 			break;
 			// we are having separate case for unpublished course list since pagination object in the response header has fully framed url and hence we can use it directly,
 		case UNPUBLISHED_COURSE_LIST_PAGINATION_URL:
-			httpResponse=urlConstructorAndCanvasCallManager(url, false, GET);;
+			urlSuffix=url;
+			shouldAddPrefix=false;
 			break;
 		case ASSIGNMENT:
 			urlSuffix= API_VERSION+COURSES+courseId+"/assignments";
-			httpResponse = urlConstructorAndCanvasCallManager(urlSuffix, true, GET);
-		    break;
+			break;
 		case ANNOUNCEMENT:
 			urlSuffix=API_VERSION+COURSES+courseId+"/discussion_topics?only_announcements=true";
-			httpResponse = urlConstructorAndCanvasCallManager(urlSuffix, true, GET);
 			break;
 		case CONFERENCE:
 			urlSuffix=API_VERSION+COURSES+courseId+"/conferences";
-			httpResponse = urlConstructorAndCanvasCallManager(urlSuffix, true, GET);
 			break;
 		case DISCUSSION_TOPICS:
 			urlSuffix=API_VERSION+COURSES+courseId+"/discussion_topics";
-			httpResponse = urlConstructorAndCanvasCallManager(urlSuffix, true, GET);
 			break;
 		case FILES:
 			urlSuffix=API_VERSION+COURSES+courseId+"/files";
-			httpResponse = urlConstructorAndCanvasCallManager(urlSuffix, true, GET);
 			break;
 		case GRADE_CHANGES:
 			urlSuffix=API_VERSION+"/audit/grade_change"+COURSES+courseId;
-			httpResponse = urlConstructorAndCanvasCallManager(urlSuffix, true, GET);
 			break;
 		case GROUPS:
 			urlSuffix=API_VERSION+COURSES+courseId+"/groups";
-			httpResponse = urlConstructorAndCanvasCallManager(urlSuffix, true, GET);
 			break;
 		case MODULES:
 			urlSuffix=API_VERSION+COURSES+courseId+"/modules";
-			httpResponse = urlConstructorAndCanvasCallManager(urlSuffix, true, GET);
 			break;
 		case PAGES:
 			urlSuffix=API_VERSION+COURSES+courseId+"/pages";
-			httpResponse = urlConstructorAndCanvasCallManager(urlSuffix, true, GET);
 			break;
 		case QUIZZES:
 			urlSuffix=API_VERSION+COURSES+courseId+"/quizzes";
-			httpResponse = urlConstructorAndCanvasCallManager(urlSuffix, true, GET);
 			break;
 		case EXTERNAL_TOOLS:
 			urlSuffix=API_VERSION+COURSES+courseId+"/external_tools";
-			httpResponse = urlConstructorAndCanvasCallManager(urlSuffix, true, GET);
 			break;
 		case COURSE_AUDIT_LOGS:
 			urlSuffix=API_VERSION+"/audit/course"+COURSES+courseId+"?"+PER_PAGE;
-			httpResponse = urlConstructorAndCanvasCallManager(urlSuffix, true, GET);
 			break;
 		case COURSE_AUDIT_LOGS_PAGINALTION_URL:
-			httpResponse=urlConstructorAndCanvasCallManager(url, false, GET);
+			urlSuffix=url;
+			shouldAddPrefix=false;
 			break;
 		case COURSE_DELETE:
 			urlSuffix=API_VERSION+COURSES+courseId+"?event=delete";
-			httpResponse = urlConstructorAndCanvasCallManager(urlSuffix, true, DELETE);
+			request=DELETE;
 			break;
-		
 		default:
 			M_log.warn("Unknown RequestType \""+requestType+"\" encounted");
 			break;
 		}
-		return httpResponse;
+		return urlConstructorAndCanvasCallManager(urlSuffix, shouldAddPrefix, request);
 	}
 	
 	private HttpResponse urlConstructorAndCanvasCallManager(String url, Boolean shouldAddPrefix, String httpReqType) {
-		String urlFull = null;
 		HttpResponse httpResponse = null;
-
+		if(url==null) {
+			M_log.error("The api call Url is null in \"urlConstructorAndCanvasCallManager()\"");
+			return httpResponse;
+		}
+		String urlFull = null;
 		if (isThisADirectCanvasCall()) {
 			if(shouldAddPrefix) {
 				urlFull = canvasURL + url;

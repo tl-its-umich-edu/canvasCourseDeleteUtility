@@ -37,7 +37,7 @@
 			<artifactId>jackson-databind</artifactId>
 			<version>2.2.3</version>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>joda-time</groupId>
 			<artifactId>joda-time</artifactId>
@@ -49,15 +49,17 @@
 			<artifactId>jackson-annotations</artifactId>
 			<version>2.2.3</version>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>com.google.guava</groupId>
 			<artifactId>guava</artifactId>
 			<version>18.0</version>
 		</dependency>
+
 	</dependencies>
+
 	<build>
-	 <finalName>canvasCourseDeleteUtility</finalName>
+		<finalName>canvasCourseDeleteUtility</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -83,8 +85,17 @@
 					</execution>
 				</executions>
 			</plugin>
-			
 
+			<plugin>
+				<inherited>true</inherited>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>2.3.2</version>
+				<configuration>
+					<source>1.8</source>
+					<target>1.8</target>
+				</configuration>
+			</plugin>
 
 		</plugins>
 		<resources>

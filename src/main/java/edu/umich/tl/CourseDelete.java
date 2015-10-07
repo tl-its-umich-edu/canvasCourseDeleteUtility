@@ -182,10 +182,8 @@ public class CourseDelete {
 			M_log.error("getTerms() has JsonParseException",e);
 		} catch (JsonMappingException e) {
 			M_log.error("getTerms() has JsonMappingException",e);
-		} catch (IOException e) {
+		} catch (IOException | ParseException e) {
 			M_log.error("getTerms() has IOException",e);
-		}catch (ParseException e) {
-			M_log.error("getTerms() has ParseException",e);
 		}
 		return enrollmentTerms;
 	}
@@ -429,10 +427,8 @@ public class CourseDelete {
 			M_log.error("JsonParseException occured apiResponseTemplate() : ",e1);
 		} catch(JsonMappingException e1) {
 			M_log.error("JsonMappingException occured apiResponseTemplate() : ",e1);
-		}  catch (IOException e) {
-			M_log.error("IOException occured apiResponseTemplate( ):" ,e);
-		}catch (ParseException e) {
-			M_log.error("ParseException occured apiResponseTemplate() : ",e);
+		} catch (ParseException | IOException e1) {
+			M_log.error("Exception occured apiResponseTemplate() : ",e1);
 		} 
 		return responseList;
 	}
@@ -490,15 +486,13 @@ public class CourseDelete {
 			if(nextPageUrl!=null) {
 				isThereActivityInCourse(course,apiHandler,nextPageUrl);
 			}
-		} catch (JsonParseException e) {
-			M_log.error("JsonParseException occured isTheirActivityInCourse() : ",e);
-		} catch (JsonMappingException e) {
-			M_log.error("JsonMappingException occured isTheirActivityInCourse() : ",e);
-		} catch (ParseException e) {
-			M_log.error("ParseException occured isTheirActivityInCourse() : ",e);
-		} catch (IOException e) {
-			M_log.error("IOException occured isTheirActivityInCourse() : ",e);
-		}
+		} catch (JsonParseException e1) {
+			M_log.error("JsonParseException occured isThereActivityInCourse() : ",e1);
+		} catch(JsonMappingException e1) {
+			M_log.error("JsonMappingException occured isThereActivityInCourse() : ",e1);
+		} catch (ParseException | IOException e) {
+			M_log.error("Exception occured isThereActivityInCourse() : ",e);
+		} 
 		return false;
 	}
 	
@@ -517,7 +511,7 @@ public class CourseDelete {
 	
 	private static void httpResponseNullCheck(HttpResponse httpResponse, RequestTypeEnum requestType) {
 		if(httpResponse==null) {
-			M_log.error("Api call"+requestType+" is not successfull");
+			M_log.error("Api call "+requestType+" is not successfull");
 			System.exit(1);
 		}
 	}
@@ -535,11 +529,9 @@ public class CourseDelete {
 		String errMsg=null;
 		try {
 			jsonErrRes = EntityUtils.toString(entity);
-		} catch (ParseException e) {
-			M_log.error("ParseException occured apiCallErrorHandler() : ",e);
-		} catch (IOException e) {
-			M_log.error("IOException occured apiCallErrorHandler() : ",e);
-		}
+		} catch (ParseException | IOException e) {
+			M_log.error("Exception occured apiCallErrorHandler() : ",e);
+		} 
 		String errMsgWithStatus="Api call for getting \""+apiText+"\" has some errors with status code: "+httpResponse.getStatusLine().getStatusCode()+": < ";
 		if(apiHandler.getCanvasCall().equals(CanvasCallEnum.API_DIRECT_CANVAS)) {
 			errMsg=canvasDirectErrorResponse(jsonErrRes,errMsgWithStatus);
