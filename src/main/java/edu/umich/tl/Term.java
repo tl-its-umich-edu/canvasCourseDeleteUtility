@@ -2,9 +2,9 @@ package edu.umich.tl;
 
 
 public class Term {
-	String canvasTermsId;
-	String termName;
-	String sisTermId;
+	private String canvasTermsId;
+	private String termName;
+	private String sisTermId;
 	
 	public String getCanvasTermId() {
 		return canvasTermsId;
