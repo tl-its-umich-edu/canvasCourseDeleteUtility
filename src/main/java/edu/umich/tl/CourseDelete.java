@@ -308,47 +308,47 @@ public class CourseDelete {
 	private static boolean isThereContentInCourse(Course course, ApiCallHandler apiHandler) {
 		M_log.debug("isTheirContentInCourse: "+course.getCourseId());
 		if(areThereFiles(course.getCourseId(),apiHandler)) {
-			M_log.debug("*** Files has content for Course: "+course.getCourseId());
+			M_log.info("*** Files has content for Course: "+course.getCourseId());
 			return true;
 		}
 		if(areThereAssignments(course.getCourseId(),apiHandler)) {
-			M_log.debug("*** Assignments has content for Course: "+course.getCourseId());
+			M_log.info("*** Assignments has content for Course: "+course.getCourseId());
 			return true;
 		}
 		if(areThereAnnouncements(course.getCourseId(),apiHandler)) {
-			M_log.debug("*** Announcements has content for Course: "+course.getCourseId());
+			M_log.info("*** Announcements has content for Course: "+course.getCourseId());
 			return true;
 		}
 		if(areThereQuizzes(course.getCourseId(),apiHandler)) {
-			M_log.debug("*** Quizzes has content for Course: "+course.getCourseId());
+			M_log.info("*** Quizzes has content for Course: "+course.getCourseId());
 			return true;
 		} 
 		if(areThereModules(course.getCourseId(),apiHandler)) {
-			M_log.debug("*** Modules has content for Course: "+course.getCourseId());
+			M_log.info("*** Modules has content for Course: "+course.getCourseId());
 			return true;
 		} 
 		if(areThereGradeChanges(course.getCourseId(),apiHandler)) {
-			M_log.debug("*** GradeChanges has content for Course: "+course.getCourseId());
+			M_log.info("*** GradeChanges has content for Course: "+course.getCourseId());
 			return true;
 		} 
 		if(areThereConferences(course.getCourseId(),apiHandler)) {
-			M_log.debug("*** Conferences has content for Course: "+course.getCourseId());
+			M_log.info("*** Conferences has content for Course: "+course.getCourseId());
 			return true;
 		} 
 		if(areThereDiscussionTopics(course.getCourseId(),apiHandler)) {
-			M_log.debug("*** DiscussionTopics has content for Course: "+course.getCourseId());
+			M_log.info("*** DiscussionTopics has content for Course: "+course.getCourseId());
 			return true;
 		} 
 		if(areThereGroups(course.getCourseId(),apiHandler)) {
-			M_log.debug("*** Groups has content for Course: "+course.getCourseId());
+			M_log.info("*** Groups has content for Course: "+course.getCourseId());
 			return true;
 		} 
 		if(areTherePages(course.getCourseId(),apiHandler)) {
-			M_log.debug("*** Pages has content for Course: "+course.getCourseId());
+			M_log.info("*** Pages has content for Course: "+course.getCourseId());
 			return true;
 		}
 		if(areThereExternalToolsAdded(course.getCourseId(),apiHandler)) {
-			M_log.debug("*** ExternalTools has content for Course: "+course.getCourseId());
+			M_log.info("*** ExternalTools has content for Course: "+course.getCourseId());
 			return true;
 		}
 		return false;
