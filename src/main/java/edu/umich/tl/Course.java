@@ -36,5 +36,18 @@ public class Course {
 		this.endDate = endDate;
 		return this;
 	}
+	
+	public static String getCourseHeader() {
+		StringBuilder courseHeader=new StringBuilder();
+		courseHeader.append("COURSE_NAME");courseHeader.append(',');
+		courseHeader.append("COURSE_ID");courseHeader.append('\n');
+		return courseHeader.toString();
+	}
+	public String getCourseValues() {
+		StringBuilder courseValues=new StringBuilder();
+		courseValues.append("\""+getCourseName()+"\"");courseValues.append(',');
+		courseValues.append(getCourseId());courseValues.append('\n');
+		return courseValues.toString();
+	}
 
 }

@@ -6,6 +6,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import javax.activation.DataHandler;
+import javax.mail.*;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeBodyPart;
+import javax.mail.internet.MimeMessage;
+import javax.mail.internet.MimeMultipart;
+import javax.mail.util.ByteArrayDataSource;
+
 import java.util.Properties;
 
 import org.apache.commons.logging.Log;
@@ -30,24 +39,41 @@ import edu.umich.tl.ApiCallHandler.RequestTypeEnum;
 
 
 public class CourseDelete {
+	
+	private static final String TEXT_CSV = "text/csv";
 	private static final String MANUAL = "manual";
 	private static final String PUBLISHED = "published";
 	private static final String CONFERENCES = "conferences";
 	private static final String EVENTS = "events";
+	protected static final String MAIL_SMTP_AUTH = "mail.smtp.auth";
+	protected static final String MAIL_SMTP_STARTTLS = "mail.smtp.starttls.enable";
+	protected static final String MAIL_SMTP_HOST = "mail.smtp.host";
+	private static final String FALSE  = "false";
+	//properties from canvasCourseDelete.properties
 	private static final String TERM = "term";
 	private static final String TERM_COUNT = "term.count";
 	private static final String CANVAS_URL = "canvas.url";
 	private static final String CANVAS_TOKEN = "canvas.token";
 	private static final String ESB_URL = "esb.url";
 	private static final String API_CALL_TYPE = "api.call.type";
+	private static final String COURSE_DELETE_REPORT_SEND_EMAILADDRESS = "course.delete.report.send.emailaddress";
+	private static final String CANVAS_COURSE_DELETE_MAILHOST = "canvas.course.delete.mailhost";
+	private static final String MAIL_DEBUG_PROPERTY = "mail.debug";
+	protected static HashMap<String, DateTime> termsInfo = new HashMap<String, DateTime>();
+	
 	protected static String canvasURL = null;
 	protected static String canvasToken = null;
 	protected static String esbURL = null;
-	protected static HashMap<String, DateTime> termsInfo = new HashMap<String, DateTime>();
+	private static String mailHost=null;
+	private static String toEmailAddress=null;
+	private static String mailDebug =FALSE;
 	//This parameter decide to make canvas or ESB api call
 	protected static CanvasCallEnum canvasCall;
+	private static  String reportFileName="CanvasCourseDeleteReport%s.csv";
+	private static  String emailSubjectText="Report from canvas course delete utility for terms %s";
 	
 	private static Log M_log = LogFactory.getLog(CourseDelete.class);
+	
 
 	public static void main(String[] args) {
 		M_log.debug("main(): called");
@@ -65,14 +91,16 @@ public class CourseDelete {
 		 * design would be focusing on one term at a time and verifying for each course in a term if people exist, content added and activity happened for deleting the course. 
 		 *  
 		 */
+		CoursesForDelete coursesForDelete=new CoursesForDelete();
 		for (Term previousTerm : previousTerms) {
-			CoursesForDelete coursesForDelete=new CoursesForDelete();
 			manageCoursesDeletion(previousTerm,coursesForDelete,apiHandler,null);
-			//Todo delete below lines
-			M_log.debug("CourseList: "+coursesForDelete.getCourses().size()+" term: "+previousTerm.getTermName());
-			M_log.debug("DeletedCourseList: "+coursesForDelete.getDeletedUnpublishedCourses().size()+" term: "+previousTerm.getTermName());
 		}
+		sendAnEmailReport(previousTerms,coursesForDelete);
+		M_log.debug("TotalCourses: "+coursesForDelete.getCourses().size());
+		M_log.debug("TotalDeletedCourse: "+coursesForDelete.getDeletedUnpublishedCourses().size());
 	}
+
+
 
 
 	public enum CanvasCallEnum{
@@ -96,6 +124,9 @@ public class CourseDelete {
 		canvasToken = properties.getProperty(CANVAS_TOKEN);
 		canvasURL = properties.getProperty(CANVAS_URL);
 		esbURL=properties.getProperty(ESB_URL);
+		mailHost=properties.getProperty(CANVAS_COURSE_DELETE_MAILHOST);
+		toEmailAddress=properties.getProperty(COURSE_DELETE_REPORT_SEND_EMAILADDRESS);
+		mailDebug = properties.getProperty(MAIL_DEBUG_PROPERTY);
 		getTermsInfoFromProperties(properties);
 		checkForApiType(properties);
 	}
@@ -164,7 +195,7 @@ public class CourseDelete {
 		ObjectMapper mapper = new ObjectMapper();
 		try {
 			String jsonResponseString = EntityUtils.toString(entity);
-			
+
 			terms = mapper.readValue(jsonResponseString,new TypeReference<HashMap<String,Object>>(){});
 			ArrayList<HashMap<String, Object>> termsList = (ArrayList<HashMap<String, Object>>) terms.get("enrollment_terms");
 			for (HashMap<String, Object> eachTerm : termsList) {
@@ -509,6 +540,63 @@ public class CourseDelete {
 		coursesForDelete.addDeletedCourse(course);
 	}
 	
+	private static void sendAnEmailReport(ArrayList<Term> previousTerms, CoursesForDelete coursesForDelete) {
+		M_log.debug("sendAnEmailReport(): Called");
+
+		Properties properties = System.getProperties();
+		properties.put(MAIL_SMTP_AUTH, "false");
+		properties.put(MAIL_SMTP_STARTTLS, "true"); 
+		properties.put(MAIL_SMTP_HOST, mailHost);
+		properties.put(MAIL_DEBUG_PROPERTY, mailDebug); //true=debugEnabled
+
+		Session session = Session.getInstance(properties);
+		MimeMessage message = new MimeMessage(session);
+
+		try {
+			ArrayList<String> termsList = new ArrayList<String>();
+			for (Term term : previousTerms) {
+				termsList.add(term.getTermName());
+			}
+			message.addRecipient(Message.RecipientType.TO, new InternetAddress(toEmailAddress));
+			message.setSubject(String.format(emailSubjectText,termsList));
+
+			StringBuilder msgBody=new StringBuilder();
+			msgBody.append("Total unpublished courses for terms ");
+			msgBody.append(termsList.toString());
+			msgBody.append(" =>");
+			msgBody.append(coursesForDelete.getCourses().size());
+			msgBody.append("\n");
+			msgBody.append("Courses Deleted => ");
+			msgBody.append(coursesForDelete.getDeletedUnpublishedCourses().size());
+			BodyPart msgBodyPart = new MimeBodyPart();
+			msgBodyPart.setText(msgBody.toString());
+
+			Multipart multipart = new MimeMultipart();
+			multipart.addBodyPart(msgBodyPart);
+			msgBodyPart=new MimeBodyPart();
+			msgBodyPart.setDataHandler(new DataHandler(new ByteArrayDataSource(generateCSVFileData(coursesForDelete).getBytes(), TEXT_CSV)));
+			msgBodyPart.setFileName(String.format(reportFileName, termsList));
+			multipart.addBodyPart(msgBodyPart);
+			message.setContent(multipart);
+			M_log.info("Sending mail...");
+			Transport.send(message);
+		} catch(MessagingException e) {
+			M_log.error("Email notification failed ",e);
+		}
+	}
+	
+	private static String generateCSVFileData(CoursesForDelete coursesForDelete) {
+		M_log.debug("generateCSVFileData(): Called");
+		StringBuilder csv = new StringBuilder();
+		ArrayList<Course> deletedCourseList = coursesForDelete.getDeletedUnpublishedCourses();
+		csv.append(Course.getCourseHeader());
+		for (Course course : deletedCourseList) {
+			csv.append(course.getCourseValues());
+		}
+		return csv.toString();
+		
+	}
+
 	private static void httpResponseNullCheck(HttpResponse httpResponse, RequestTypeEnum requestType) {
 		if(httpResponse==null) {
 			M_log.error("Api call "+requestType+" is not successfull");
@@ -603,6 +691,7 @@ public class CourseDelete {
 		M_log.debug("Returning next page header as: " + (result != null ? result : "NONE"));
 		return result;
 	}
+	
 	
 
 	
