@@ -48,7 +48,7 @@ public class CourseDelete {
 	protected static final String MAIL_SMTP_AUTH = "mail.smtp.auth";
 	protected static final String MAIL_SMTP_STARTTLS = "mail.smtp.starttls.enable";
 	protected static final String MAIL_SMTP_HOST = "mail.smtp.host";
-	private static final String FALSE  = "false";
+	private static final String FALSE  = Boolean.FALSE.toString();
 	//properties from canvasCourseDelete.properties
 	private static final String TERM = "term";
 	private static final String TERM_COUNT = "term.count";
@@ -69,7 +69,8 @@ public class CourseDelete {
 	private static String mailDebug =FALSE;
 	//This parameter decide to make canvas or ESB api call
 	protected static CanvasCallEnum canvasCall;
-	private static  String reportFileName="CanvasCourseDeleteReport%s.csv";
+	private static  String deletedCoursesFileName="CanvasCourseDeleteReport%s.csv";
+	private static  String contentCoursesFileName="CanvasContentCourseReport%s.csv";
 	private static  String emailSubjectText="Report from canvas course delete utility for terms %s";
 	
 	private static Log M_log = LogFactory.getLog(CourseDelete.class);
@@ -536,13 +537,12 @@ public class CourseDelete {
 			M_log.error(apiCallErrorHandler(httpResponse,RequestTypeEnum.COURSE_DELETE,apiHandler));
 			return;
 		}
-		M_log.debug("***** Course Deleted ***** "+course.getCourseId());	
+		M_log.info("***** Course Deleted: "+course.getCourseId());	
 		coursesForDelete.addDeletedCourse(course);
 	}
 	
 	private static void sendAnEmailReport(ArrayList<Term> previousTerms, CoursesForDelete coursesForDelete) {
 		M_log.debug("sendAnEmailReport(): Called");
-
 		Properties properties = System.getProperties();
 		properties.put(MAIL_SMTP_AUTH, "false");
 		properties.put(MAIL_SMTP_STARTTLS, "true"); 
@@ -552,11 +552,11 @@ public class CourseDelete {
 		Session session = Session.getInstance(properties);
 		MimeMessage message = new MimeMessage(session);
 
+		ArrayList<String> termsList = new ArrayList<String>();
+		for (Term term : previousTerms) {
+			termsList.add(term.getTermName());
+		}
 		try {
-			ArrayList<String> termsList = new ArrayList<String>();
-			for (Term term : previousTerms) {
-				termsList.add(term.getTermName());
-			}
 			message.addRecipient(Message.RecipientType.TO, new InternetAddress(toEmailAddress));
 			message.setSubject(String.format(emailSubjectText,termsList));
 
@@ -568,25 +568,44 @@ public class CourseDelete {
 			msgBody.append("\n");
 			msgBody.append("Courses Deleted => ");
 			msgBody.append(coursesForDelete.getDeletedUnpublishedCourses().size());
-			BodyPart msgBodyPart = new MimeBodyPart();
-			msgBodyPart.setText(msgBody.toString());
 
 			Multipart multipart = new MimeMultipart();
+			//msgBody of the email
+			BodyPart msgBodyPart = new MimeBodyPart();
+			msgBodyPart.setText(msgBody.toString());
 			multipart.addBodyPart(msgBodyPart);
+			//Attachment with deleted Course list
 			msgBodyPart=new MimeBodyPart();
-			msgBodyPart.setDataHandler(new DataHandler(new ByteArrayDataSource(generateCSVFileData(coursesForDelete).getBytes(), TEXT_CSV)));
-			msgBodyPart.setFileName(String.format(reportFileName, termsList));
+			msgBodyPart.setDataHandler(new DataHandler(new ByteArrayDataSource(generateCSVFileForDeletedCourses(coursesForDelete).getBytes(), TEXT_CSV)));
+			msgBodyPart.setFileName(String.format(deletedCoursesFileName, termsList));
 			multipart.addBodyPart(msgBodyPart);
+			//Attachment with CourseWithContentList
+			msgBodyPart=new MimeBodyPart();
+			msgBodyPart.setDataHandler(new DataHandler(new ByteArrayDataSource(generateCSVFileForContentCourses(getCoursesWithContentList(coursesForDelete)).getBytes(), TEXT_CSV)));
+			msgBodyPart.setFileName(String.format(contentCoursesFileName, termsList));
+			multipart.addBodyPart(msgBodyPart);
+
 			message.setContent(multipart);
 			M_log.info("Sending mail...");
 			Transport.send(message);
 		} catch(MessagingException e) {
-			M_log.error("Email notification failed ",e);
+			M_log.error("Email notification failed, number of courses deleted for terms: "
+					+termsList+" are: "+coursesForDelete.getDeletedUnpublishedCourses().size()+"/"+coursesForDelete.getCourses().size(),e);
 		}
 	}
+
+
+	private static ArrayList<Course> getCoursesWithContentList(CoursesForDelete coursesForDelete) {
+		M_log.debug("getCoursesWithContentList(): Called");
+		ArrayList<Course> totalUnpublishedCourses = coursesForDelete.getCourses();
+		ArrayList<Course> deletedUnpublishedCourses = coursesForDelete.getDeletedUnpublishedCourses();
+		ArrayList<Course> coursesWithContent = new ArrayList<Course>(totalUnpublishedCourses);
+		coursesWithContent.removeAll(deletedUnpublishedCourses);
+		return coursesWithContent;
+	}
 	
-	private static String generateCSVFileData(CoursesForDelete coursesForDelete) {
-		M_log.debug("generateCSVFileData(): Called");
+	private static String generateCSVFileForDeletedCourses(CoursesForDelete coursesForDelete) {
+		M_log.debug("generateCSVFileForDeletedCourses(): Called");
 		StringBuilder csv = new StringBuilder();
 		ArrayList<Course> deletedCourseList = coursesForDelete.getDeletedUnpublishedCourses();
 		csv.append(Course.getCourseHeader());
@@ -594,12 +613,21 @@ public class CourseDelete {
 			csv.append(course.getCourseValues());
 		}
 		return csv.toString();
-		
+	}
+	
+	private static String generateCSVFileForContentCourses(ArrayList<Course> coursesWithContentList) {
+		M_log.debug("generateCSVFileForContentCourses(): Called");
+		StringBuilder csv = new StringBuilder();
+		csv.append(Course.getCourseHeader());
+		for (Course course : coursesWithContentList) {
+			csv.append(course.getCourseValues());
+		}
+		return csv.toString();
 	}
 
 	private static void httpResponseNullCheck(HttpResponse httpResponse, RequestTypeEnum requestType) {
 		if(httpResponse==null) {
-			M_log.error("Api call "+requestType+" is not successfull");
+			M_log.error("Api call "+requestType+" is not successful");
 			System.exit(1);
 		}
 	}
