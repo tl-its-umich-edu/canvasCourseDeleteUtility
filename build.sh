@@ -4,7 +4,6 @@
 # Debugging: -x to enable, +x to disable
 # -e: the shell shall immediately exit in case of failure of list of commands
 set -xe
-mvn clean install
 timestamp=$(date +%Y%m%d%H%M%S)
 cd target
 warFilename=$(ls *.jar | head -1)
