@@ -6,6 +6,7 @@
 set -xe
 timestamp=$(date +%Y%m%d%H%M%S)
 cd target
+# Removing original-canvasCourseDeleteUtility.jar as this is redundant and created as part of <maven-shade-plugin> when creating a uber/fat jar
 rm original*.jar
 filename=$(ls *.jar | head -1)
 targetFilename=$(basename ${filename} .jar)
