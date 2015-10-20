@@ -6,8 +6,9 @@
 set -xe
 timestamp=$(date +%Y%m%d%H%M%S)
 cd target
-warFilename=$(ls *.jar | head -1)
-targetFilename=$(basename ${warFilename} .jar)
+rm original*.jar
+filename=$(ls *.jar | head -1)
+targetFilename=$(basename ${filename} .jar)
 #GIT_BRANCH =origin/TLUNIZIN-424 or origin/master jenkins environmental variable to get git branch
 branch=${GIT_BRANCH}
 if [ -n "$branch" ]; then
