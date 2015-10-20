@@ -1,9 +1,11 @@
 # canvasCourseDeleteUtility
-One of the dangers with an auto-provisioning course approach is the proliferation of unused course shells. One approach to solving this is deleting course shells at the end of each semester, when it can be deemed that they are unused. This utility will automatically delete course shells at the end date of each term. The current term is determined programmatically. The workflow is 
+One of the dangers with an auto-provisioning approach is the proliferation of unused course shells. One approach to solving this is deleting course shells at the end of each semester, when it can be deemed that they are unused. The workflow should be 
 
-1. Check to see if there are people in the course. If there are no people, the course can be deleted. 
-2. Check to see if there is content in the course for tools [ Announcements, Assignments, Conferences, Discussion topics, Files, Grade changes, Groups from a course, Modules, Pages, Quizzes, external tools ] . If there is content of any type that we have access to, do not delete the course. 
+1. Check a course End date is set after the term end date, in that cases we don't want to delete the course. 
+2. if the Course end date is past, check to see if there is content in the course. If there is content of any type that we have access to, do not delete the course. 
 3. If there is no content, check the course audit log to see if the course has ever been published manually. 'Published' events from the 'sis' event_source are to be expected for every course, so should not be used as criteria that the course has ever been used. If the course has never been published and has no content, delete the course. 
+4. The Utility will send out an email with 2 csv file as attachment containing report of unpublished courses that got deleted and the unpublished course that has content.
+
 
 ## Build Directions
 
@@ -23,11 +25,35 @@ One of the dangers with an auto-provisioning course approach is the proliferatio
     .....
     termN=2010;01/04/2015
     term.count=N
+    canvas.course.delete.mailhost=
+    course.delete.report.send.emailaddress=
+    mail.debug=true
     ```
     
     
    
 ## Run Directions
-1. `java -jar canvasCourseDeleteUtility.jar file:/<path>/canvasCourseDelete.properties`
+1. The `run.sh` is used for running the utility and is checked in to the source code. Follow the instruction that is given in the `run.sh` to run the utility successfully. `./run.sh`
+2. The delete process may take long time so it is good idea to run it in the background so that it continues after logging out from a machine. So use   below while running on Linux servers.
+
+    `nohup ./run.sh > /path-to-file/logFile.log &` 
+
+## log4j.properties file
+1. The logs can be rolled to console or to a file or to both. It might slow down the process if logged to console, if a delete process takes long time it is best to roll the logs to a file. Below configuration is logging to both File and Console.
+
+  	 ```
+    log4j.rootLogger=INFO, A1, rollingFile
+    #Logging to console
+	log4j.appender.A1=org.apache.log4j.ConsoleAppender
+	log4j.appender.A1.layout=org.apache.log4j.PatternLayout
+	log4j.appender.A1.layout.ConversionPattern=%d [%t] %-5p %c - %m%n
+	#Logging to file
+	log4j.appender.rollingFile=org.apache.log4j.RollingFileAppender
+	log4j.appender.rollingFile.File=<path-to-the file>/ccdulog.log
+	log4j.appender.rollingFile.MaxBackupIndex=20
+	log4j.appender.rollingFile.layout = org.apache.log4j.PatternLayout
+	log4j.appender.rollingFile.layout.ConversionPattern=%d [%t] %-5p %c - %m%n
+	log4j.logger.edu.umich.tl=INFO
+    ```
   
  

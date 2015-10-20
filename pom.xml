@@ -55,6 +55,12 @@
 			<artifactId>guava</artifactId>
 			<version>18.0</version>
 		</dependency>
+		
+		<dependency>
+			<groupId>javax.mail</groupId>
+			<artifactId>mail</artifactId>
+			<version>1.4.7</version>
+		</dependency>
 
 	</dependencies>
 
@@ -98,13 +104,5 @@
 			</plugin>
 
 		</plugins>
-		<resources>
-			<resource>
-				<directory>src/main/resources</directory>
-				<includes>
-					<include>**/*.properties</include>
-				</includes>
-			</resource>
-		</resources>
 	</build>
 </project>
