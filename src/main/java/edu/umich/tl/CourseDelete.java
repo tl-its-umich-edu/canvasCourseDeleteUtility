@@ -33,6 +33,7 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Stopwatch;
 
 import edu.umich.tl.ApiCallHandler.RequestTypeEnum;
 
@@ -94,7 +95,10 @@ public class CourseDelete {
 		 */
 		CoursesForDelete coursesForDelete=new CoursesForDelete();
 		for (Term previousTerm : previousTerms) {
+			Stopwatch stopwatch = Stopwatch.createStarted();
 			manageCoursesDeletion(previousTerm,coursesForDelete,apiHandler,null);
+			stopwatch.stop();
+			M_log.info("The delete process of unused courses for the term "+ previousTerm.getTermName()+" took: "+stopwatch);
 		}
 		sendAnEmailReport(previousTerms,coursesForDelete);
 		M_log.debug("TotalCourses: "+coursesForDelete.getCourses().size());
@@ -286,6 +290,7 @@ public class CourseDelete {
 				M_log.info("There are no unpublished courses for the term: "+previousTerm.getTermName());
 				return;
 			}
+			Stopwatch stopwatch = Stopwatch.createStarted();
 			for (HashMap<String, Object> course : courseList) {
 				Course aCourse=new Course()
 						.setCourseId(String.valueOf((Integer)course.get("id")))
@@ -296,6 +301,8 @@ public class CourseDelete {
 				coursesForDelete.addCourse(aCourse);
 				checkForEndDateContentActivityInACourse(aCourse, apiHandler,coursesForDelete);
 			}
+			stopwatch.stop();
+			M_log.info("^^^^^ The API call for "+courseList.size()+" Courses took: "+stopwatch);
 			String nextPageUrl = getNextPageUrl(httpResponse);
 			if(nextPageUrl!=null) {
 				manageCoursesDeletion(previousTerm,coursesForDelete,apiHandler,nextPageUrl);
