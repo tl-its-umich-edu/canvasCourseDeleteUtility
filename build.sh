@@ -25,9 +25,10 @@ if [ ! -d "artifact" ]; then
     chmod -R 755 artifact
 fi
 
+#Git commit version
 gitNum=`git log -n 1 --pretty="format:%h"`
 
-echo "$JOB_NAME | Build: $BUILD_NUMBER | $GIT_URL | $gitNum | $btemp | $BUILD_ID" > version.txt
+echo "Build# $BUILD_NUMBER | $GIT_URL | $gitNum | $btemp | $BUILD_ID" > version.txt
 
 
 ## construct new tar file
