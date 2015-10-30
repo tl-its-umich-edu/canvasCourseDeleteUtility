@@ -27,6 +27,8 @@ One of the dangers with an auto-provisioning approach is the proliferation of un
     term.count=N
     canvas.course.delete.mailhost=
     course.delete.report.send.emailaddress=
+    # This property controls in real life if you want to delete the courses in a particular environment or not. False indicated not to delete the courses, and may be for testing purposes.
+    delete.course=false
     mail.debug=true
     ```
     

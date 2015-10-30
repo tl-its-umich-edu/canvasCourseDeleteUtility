@@ -60,6 +60,7 @@ public class CourseDelete {
 	private static final String COURSE_DELETE_REPORT_SEND_EMAILADDRESS = "course.delete.report.send.emailaddress";
 	private static final String CANVAS_COURSE_DELETE_MAILHOST = "canvas.course.delete.mailhost";
 	private static final String MAIL_DEBUG_PROPERTY = "mail.debug";
+	private static final String DELETE_COURSE_ENABLED = "delete.course";
 	protected static HashMap<String, DateTime> termsInfo = new HashMap<String, DateTime>();
 	
 	protected static String canvasURL = null;
@@ -75,6 +76,7 @@ public class CourseDelete {
 	private static  String emailSubjectText="Report from canvas course delete utility for terms %s";
 	
 	private static Log M_log = LogFactory.getLog(CourseDelete.class);
+	private static boolean isCourseDeleteEnabled=false;
 	
 
 	public static void main(String[] args) {
@@ -132,6 +134,7 @@ public class CourseDelete {
 		mailHost=properties.getProperty(CANVAS_COURSE_DELETE_MAILHOST);
 		toEmailAddress=properties.getProperty(COURSE_DELETE_REPORT_SEND_EMAILADDRESS);
 		mailDebug = properties.getProperty(MAIL_DEBUG_PROPERTY);
+		isCourseDeleteEnabled = Boolean.parseBoolean(properties.getProperty(DELETE_COURSE_ENABLED,FALSE));
 		getTermsInfoFromProperties(properties);
 		checkForApiType(properties);
 	}
@@ -535,14 +538,20 @@ public class CourseDelete {
 		return false;
 	}
 	
-	
+	/*
+	 * This is actually deleting the course , we have 'delete.course' properties from properties file if true then course will be deleted from canvas instance,
+	 * Set it to false for testing purposes
+	 */
 	private static void deleteTheCourse(Course course, ApiCallHandler apiHandler,CoursesForDelete coursesForDelete) {
-		HttpResponse httpResponse = apiHandler.getApiResponse(RequestTypeEnum.COURSE_DELETE, null, null, course.getCourseId());
-		httpResponseNullCheck(httpResponse,RequestTypeEnum.COURSE_DELETE);
-		int statusCode = httpResponse.getStatusLine().getStatusCode();
-		if(statusCode!=200) {
-			M_log.error(apiCallErrorHandler(httpResponse,RequestTypeEnum.COURSE_DELETE,apiHandler));
-			return;
+		if(isCourseDeleteEnabled) {
+			M_log.debug("courses enabled for delete");
+			HttpResponse httpResponse = apiHandler.getApiResponse(RequestTypeEnum.COURSE_DELETE, null, null, course.getCourseId());
+			httpResponseNullCheck(httpResponse,RequestTypeEnum.COURSE_DELETE);
+			int statusCode = httpResponse.getStatusLine().getStatusCode();
+			if(statusCode!=200) {
+				M_log.error(apiCallErrorHandler(httpResponse,RequestTypeEnum.COURSE_DELETE,apiHandler));
+				return;
+			}
 		}
 		M_log.info("***** Course Deleted: "+course.getCourseId());	
 		coursesForDelete.addDeletedCourse(course);
