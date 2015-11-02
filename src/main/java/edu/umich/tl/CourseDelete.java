@@ -76,7 +76,7 @@ public class CourseDelete {
 	private static  String emailSubjectText="Report from canvas course delete utility for terms %s";
 	
 	private static Log M_log = LogFactory.getLog(CourseDelete.class);
-	private static boolean isCourseDeleteEnabled=false;
+	private static boolean courseDeleteEnabled=false;
 	
 
 	public static void main(String[] args) {
@@ -134,7 +134,7 @@ public class CourseDelete {
 		mailHost=properties.getProperty(CANVAS_COURSE_DELETE_MAILHOST);
 		toEmailAddress=properties.getProperty(COURSE_DELETE_REPORT_SEND_EMAILADDRESS);
 		mailDebug = properties.getProperty(MAIL_DEBUG_PROPERTY);
-		isCourseDeleteEnabled = Boolean.parseBoolean(properties.getProperty(DELETE_COURSE_ENABLED,FALSE));
+		courseDeleteEnabled = Boolean.parseBoolean(properties.getProperty(DELETE_COURSE_ENABLED,FALSE));
 		getTermsInfoFromProperties(properties);
 		checkForApiType(properties);
 	}
@@ -543,8 +543,7 @@ public class CourseDelete {
 	 * Set it to false for testing purposes
 	 */
 	private static void deleteTheCourse(Course course, ApiCallHandler apiHandler,CoursesForDelete coursesForDelete) {
-		if(isCourseDeleteEnabled) {
-			M_log.debug("courses enabled for delete");
+		if(courseDeleteEnabled) {
 			HttpResponse httpResponse = apiHandler.getApiResponse(RequestTypeEnum.COURSE_DELETE, null, null, course.getCourseId());
 			httpResponseNullCheck(httpResponse,RequestTypeEnum.COURSE_DELETE);
 			int statusCode = httpResponse.getStatusLine().getStatusCode();
@@ -552,8 +551,10 @@ public class CourseDelete {
 				M_log.error(apiCallErrorHandler(httpResponse,RequestTypeEnum.COURSE_DELETE,apiHandler));
 				return;
 			}
+			M_log.info("***** Course Deleted: "+course.getCourseId());	
+		}else {
+		M_log.info("***** Course Deleted(skipped): "+course.getCourseId());
 		}
-		M_log.info("***** Course Deleted: "+course.getCourseId());	
 		coursesForDelete.addDeletedCourse(course);
 	}
 	
