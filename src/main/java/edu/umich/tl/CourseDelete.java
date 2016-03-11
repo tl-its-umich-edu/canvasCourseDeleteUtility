@@ -46,6 +46,7 @@ public class CourseDelete {
 	private static final String PUBLISHED = "published";
 	private static final String CONFERENCES = "conferences";
 	private static final String EVENTS = "events";
+	private static final String SYLLABUS = "syllabus_body";
 	protected static final String MAIL_SMTP_AUTH = "mail.smtp.auth";
 	protected static final String MAIL_SMTP_STARTTLS = "mail.smtp.starttls.enable";
 	protected static final String MAIL_SMTP_HOST = "mail.smtp.host";
@@ -327,7 +328,8 @@ public class CourseDelete {
 	private static void checkForEndDateContentActivityInACourse(Course course,ApiCallHandler apiHandler,CoursesForDelete coursesForDelete) {
 		if(!isCourseEndDateIsPastTheCurrentDate(course)) {
 			if(!isThereContentInCourse(course,apiHandler)) {
-				if(!isThereActivityInCourse(course,apiHandler,null)) {
+				if(!isThereActivityInCourse(course.getCourseId(),apiHandler)) {
+					M_log.info("*** NO Activity in Course: "+course.getCourseId());
 					deleteTheCourse(course,apiHandler,coursesForDelete);
 				}
 			}
@@ -381,6 +383,10 @@ public class CourseDelete {
 			M_log.info("*** DiscussionTopics has content for Course: "+course.getCourseId());
 			return true;
 		} 
+		if(areThereSyllabus(course.getCourseId(),apiHandler)) {
+			M_log.info("*** Syllabus has content for Course: "+course.getCourseId());
+			return true;
+		} 
 		if(areThereGroups(course.getCourseId(),apiHandler)) {
 			M_log.info("*** Groups has content for Course: "+course.getCourseId());
 			return true;
@@ -393,63 +399,63 @@ public class CourseDelete {
 			M_log.info("*** ExternalTools has content for Course: "+course.getCourseId());
 			return true;
 		}
+		M_log.info("*** NO Content in Course: "+course.getCourseId());
 		return false;
 	}
 
 	private static boolean areThereAssignments(String courseId,ApiCallHandler apiHandler) {
-		List<HashMap<String, Object>> assignmentRes = apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.ASSIGNMENT);
-		return checkResponseState(assignmentRes);
+		return apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.ASSIGNMENT);
 	}
 	private static boolean areThereQuizzes(String courseId, ApiCallHandler apiHandler) {
-		List<HashMap<String, Object>> quizzesRes = apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.QUIZZES);
-		return checkResponseState(quizzesRes);
+		return apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.QUIZZES);
 	}
 	private static boolean areThereAnnouncements(String courseId,ApiCallHandler apiHandler) {
-		List<HashMap<String, Object>> announcementRes = apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.ANNOUNCEMENT);
-		return checkResponseState(announcementRes);
+		return apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.ANNOUNCEMENT);
 	}
 	private static boolean areThereDiscussionTopics(String courseId, ApiCallHandler apiHandler) {
-		List<HashMap<String, Object>> discussionsRes = apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.DISCUSSION_TOPICS);
-		return checkResponseState(discussionsRes);
+		return apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.DISCUSSION_TOPICS);
 	}
 	private static boolean areThereFiles(String courseId, ApiCallHandler apiHandler) {
-		List<HashMap<String, Object>> filesRes = apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.FILES);
-		return checkResponseState(filesRes);
+		return apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.FILES);
 	}
 	private static boolean areThereGroups(String courseId, ApiCallHandler apiHandler) {
-		List<HashMap<String, Object>> groupsRes = apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.GROUPS);
-		return checkResponseState(groupsRes);
+		return apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.GROUPS);
 	}
 	private static boolean areThereModules(String courseId, ApiCallHandler apiHandler) {
-		List<HashMap<String, Object>> modulesRes = apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.MODULES);
-		return checkResponseState(modulesRes);
+		return apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.MODULES);
 	}
 	private static boolean areTherePages(String courseId, ApiCallHandler apiHandler) {
-		List<HashMap<String, Object>> pagesRes = apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.PAGES);
-		return checkResponseState(pagesRes);
+		return apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.PAGES);
 	}
 	private static boolean areThereExternalToolsAdded(String courseId, ApiCallHandler apiHandler) {
-		List<HashMap<String, Object>> externalTools = apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.EXTERNAL_TOOLS);
-		return checkResponseState(externalTools);
+		return apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.EXTERNAL_TOOLS);
 	}
 	private static boolean areThereGradeChanges(String courseId, ApiCallHandler apiHandler) {
-		List<HashMap<String, Object>> gradeChanges = apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.GRADE_CHANGES);
-		return checkResponseState(gradeChanges);
+		return apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.GRADE_CHANGES);
 	}
 	private static boolean areThereConferences(String courseId, ApiCallHandler apiHandler) {
-		List<HashMap<String, Object>> conferenceRes = apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.CONFERENCE);
-		return checkResponseState(conferenceRes);
+		return apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.CONFERENCE);
 	}
-
-
-	private static List<HashMap<String,Object>> apiResponseTemplate(String courseId, ApiCallHandler apiHandler,RequestTypeEnum requestType) {
+	private static boolean areThereSyllabus(String courseId, ApiCallHandler apiHandler) {
+		return apiResponseTemplate(courseId, apiHandler, RequestTypeEnum.SYLLABUS);
+	}
+    /* This checks for activity in a course, we are looking for the "manually published" events in the past. Please note that the course we are checking 
+     * is an unpublished course currently, we don't want to delete "manually published" course in the past as this indicates that the course is still in interest to an instructor.  
+     */
+	private static boolean isThereActivityInCourse(String courseId, ApiCallHandler apiHandler) {
+		M_log.debug("isThereActivityInCourse: "+courseId);
+		return apiResponseTemplate(courseId, apiHandler, RequestTypeEnum.COURSE_AUDIT_LOGS);
+	}
+	
+	private static boolean apiResponseTemplate(String courseId, ApiCallHandler apiHandler,RequestTypeEnum requestType) {
+		boolean response = true;
 		HttpResponse httpResponse = apiHandler.getApiResponse(requestType, null, null, courseId);
 		httpResponseNullCheck(httpResponse,requestType);
 		List<HashMap<String, Object>> responseList=null;
 		int statusCode = httpResponse.getStatusLine().getStatusCode();
 		if(statusCode!=200) {
 			M_log.error(apiCallErrorHandler(httpResponse,requestType,apiHandler));
-			return responseList;
+			return response;
 		}
 		String jsonResponseString = null;
 		ObjectMapper mapper = new ObjectMapper();
@@ -458,13 +464,36 @@ public class CourseDelete {
 			jsonResponseString = EntityUtils.toString(entity);
 			if(requestType.equals(RequestTypeEnum.CONFERENCE)) {
 				responseList = responsePropertyLookUp(jsonResponseString, CONFERENCES);
-				return responseList;
+				return !responseList.isEmpty();
 			}
 			if(requestType.equals(RequestTypeEnum.GRADE_CHANGES)) {
 				responseList = responsePropertyLookUp(jsonResponseString, EVENTS);
-				return responseList;
+				return !responseList.isEmpty();
 			}
+			if(requestType.equals(RequestTypeEnum.SYLLABUS)){
+				Map<String, Object> syllabusRes = responseMapping(jsonResponseString);
+				String syllabusBody = (String)syllabusRes.get(SYLLABUS);
+				return (syllabusBody==null) ? false : true;
+			}
+			if(requestType.equals(RequestTypeEnum.COURSE_AUDIT_LOGS)){
+				responseList = responsePropertyLookUp(jsonResponseString, EVENTS);
+				if(responseList.isEmpty()){
+					return false;
+				}
+				for (HashMap<String, Object> event : responseList) {
+					String eventType = (String)event.get("event_type");
+					String eventSource = (String) event.get("event_source");
+					// This is a case where some time in the past this course got published so we do not want to delete the course.  
+					if(eventType.equals(PUBLISHED)&&eventSource.equals(MANUAL)) {
+						M_log.info("*** Course has Activity going on: "+courseId);
+						return true;
+					}
+				}
+
+			}
+
 			responseList = mapper.readValue(jsonResponseString,new TypeReference<List<Object>>(){});
+			response=!responseList.isEmpty();
 		} catch (JsonParseException e1) {
 			M_log.error("JsonParseException occured apiResponseTemplate() : ",e1);
 		} catch(JsonMappingException e1) {
@@ -472,72 +501,26 @@ public class CourseDelete {
 		} catch (ParseException | IOException e1) {
 			M_log.error("Exception occured apiResponseTemplate() : ",e1);
 		} 
-		return responseList;
+		return response;
+		
 	}
 	
-	private static boolean checkResponseState(List<HashMap<String, Object>> response) {
-		//response=null is a error condition so we don't want to delete the course just skip the course from the delete determination logic.  
-		if(response==null || (!response.isEmpty())) {
-			return true;
-		}
-		return false;
-	}
-
-	private static List<HashMap<String, Object>> responsePropertyLookUp(String jsonResponseString, String property)
+	private static Map<String, Object> responseMapping(String jsonResponseString)
 			throws IOException, JsonParseException, JsonMappingException {
 		ObjectMapper mapper = new ObjectMapper();
-		List<HashMap<String, Object>> responseList;
 		Map<String,Object> resMap = new HashMap<String,Object>();
 		resMap = mapper.readValue(jsonResponseString,new TypeReference<HashMap<String,Object>>(){});
+		return resMap;
+	}
+	
+	private static List<HashMap<String, Object>> responsePropertyLookUp(String jsonResponseString, String property)
+			throws IOException, JsonParseException, JsonMappingException {
+		List<HashMap<String, Object>> responseList;
+		Map<String, Object> resMap = responseMapping(jsonResponseString);
 		responseList = (List<HashMap<String, Object>>) resMap.get(property);
 		return responseList;
 	}
-    /*
-     * This check for activity in a course we are looking for the "manually published" events in the past. Please note that the course we are checking this event
-     * is an unpublished course. We don't want to delete "manually published" course in the past as this indicates that the course is still in interest to an instructor.  
-     */
-	private static boolean isThereActivityInCourse(Course course, ApiCallHandler apiHandler,String paginationUrl) {
-		M_log.debug("isTheirActivityInCourse: "+course.getCourseId());
-		HttpResponse httpResponse=null;
-		if(paginationUrl==null) {
-			httpResponse = apiHandler.getApiResponse(RequestTypeEnum.COURSE_AUDIT_LOGS, null, null, course.getCourseId());
-		}else {
-			httpResponse = apiHandler.getApiResponse(RequestTypeEnum.COURSE_AUDIT_LOGS_PAGINALTION_URL, null, paginationUrl, course.getCourseId());
-		}
-		httpResponseNullCheck(httpResponse,RequestTypeEnum.COURSE_AUDIT_LOGS);
-		String jsonResponseString = null;
-		List<HashMap<String, Object>> eventList=null;
-		int statusCode = httpResponse.getStatusLine().getStatusCode();
-		if(statusCode!=200) {
-			M_log.error(apiCallErrorHandler(httpResponse,RequestTypeEnum.COURSE_AUDIT_LOGS,apiHandler));
-			return true;
-		}
-		HttpEntity entity = httpResponse.getEntity();
-		try {
-			jsonResponseString = EntityUtils.toString(entity);
-			eventList = responsePropertyLookUp(jsonResponseString, EVENTS);
-			for (HashMap<String, Object> event : eventList) {
-				String eventType = (String)event.get("event_type");
-				String eventSource = (String) event.get("event_source");
-				// This is a case where some time in the past this course got published so we do not want to delete the course.  
-				if(eventType.equals(PUBLISHED)&&eventSource.equals(MANUAL)) {
-					return true;
-				}
-			}
-			String nextPageUrl = getNextPageUrl(httpResponse);
-			if(nextPageUrl!=null) {
-				isThereActivityInCourse(course,apiHandler,nextPageUrl);
-			}
-		} catch (JsonParseException e1) {
-			M_log.error("JsonParseException occured isThereActivityInCourse() : ",e1);
-		} catch(JsonMappingException e1) {
-			M_log.error("JsonMappingException occured isThereActivityInCourse() : ",e1);
-		} catch (ParseException | IOException e) {
-			M_log.error("Exception occured isThereActivityInCourse() : ",e);
-		} 
-		return false;
-	}
-	
+    	
 	/*
 	 * This is actually deleting the course , we have 'delete.course' properties from properties file if true then course will be deleted from canvas instance,
 	 * Set it to false for testing purposes

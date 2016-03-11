@@ -42,7 +42,7 @@ public class ApiCallHandler {
 	public enum RequestTypeEnum{
 		TERM, UNPUBLISHED_COURSE_LIST, UNPUBLISHED_COURSE_LIST_PAGINATION_URL, 
 		ASSIGNMENT,ANNOUNCEMENT,CONFERENCE,DISCUSSION_TOPICS,FILES,GRADE_CHANGES,GROUPS,MODULES,
-		PAGES,QUIZZES,EXTERNAL_TOOLS,COURSE_AUDIT_LOGS,COURSE_AUDIT_LOGS_PAGINALTION_URL,COURSE_DELETE;
+		PAGES,QUIZZES,EXTERNAL_TOOLS,COURSE_AUDIT_LOGS,COURSE_DELETE,SYLLABUS;
 	}
 
 	public HttpResponse getApiResponse(RequestTypeEnum requestType, String canvasTermIdForSisTermId, String url,String courseId) {
@@ -95,15 +95,14 @@ public class ApiCallHandler {
 			urlSuffix=API_VERSION+COURSES+courseId+"/external_tools";
 			break;
 		case COURSE_AUDIT_LOGS:
-			urlSuffix=API_VERSION+"/audit/course"+COURSES+courseId+"?"+PER_PAGE;
-			break;
-		case COURSE_AUDIT_LOGS_PAGINALTION_URL:
-			urlSuffix=url;
-			shouldAddPrefix=false;
+			urlSuffix=API_VERSION+"/audit/course"+COURSES+courseId;
 			break;
 		case COURSE_DELETE:
 			urlSuffix=API_VERSION+COURSES+courseId+"?event=delete";
 			request=DELETE;
+			break;
+		case SYLLABUS:	
+			urlSuffix=API_VERSION+COURSES+courseId+"?include=syllabus_body";
 			break;
 		default:
 			M_log.warn("Unknown RequestType \""+requestType+"\" encounted");
