@@ -2,6 +2,7 @@ package edu.umich.tl;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -351,94 +352,18 @@ public class CourseDelete {
 
 	private static boolean isThereContentInCourse(Course course, ApiCallHandler apiHandler) {
 		M_log.debug("isTheirContentInCourse: "+course.getCourseId());
-		if(areThereFiles(course.getCourseId(),apiHandler)) {
-			M_log.info("*** Files has content for Course: "+course.getCourseId());
-			return true;
-		}
-		if(areThereAssignments(course.getCourseId(),apiHandler)) {
-			M_log.info("*** Assignments has content for Course: "+course.getCourseId());
-			return true;
-		}
-		if(areThereAnnouncements(course.getCourseId(),apiHandler)) {
-			M_log.info("*** Announcements has content for Course: "+course.getCourseId());
-			return true;
-		}
-		if(areThereQuizzes(course.getCourseId(),apiHandler)) {
-			M_log.info("*** Quizzes has content for Course: "+course.getCourseId());
-			return true;
-		} 
-		if(areThereModules(course.getCourseId(),apiHandler)) {
-			M_log.info("*** Modules has content for Course: "+course.getCourseId());
-			return true;
-		} 
-		if(areThereGradeChanges(course.getCourseId(),apiHandler)) {
-			M_log.info("*** GradeChanges has content for Course: "+course.getCourseId());
-			return true;
-		} 
-		if(areThereConferences(course.getCourseId(),apiHandler)) {
-			M_log.info("*** Conferences has content for Course: "+course.getCourseId());
-			return true;
-		} 
-		if(areThereDiscussionTopics(course.getCourseId(),apiHandler)) {
-			M_log.info("*** DiscussionTopics has content for Course: "+course.getCourseId());
-			return true;
-		} 
-		if(areThereSyllabus(course.getCourseId(),apiHandler)) {
-			M_log.info("*** Syllabus has content for Course: "+course.getCourseId());
-			return true;
-		} 
-		if(areThereGroups(course.getCourseId(),apiHandler)) {
-			M_log.info("*** Groups has content for Course: "+course.getCourseId());
-			return true;
-		} 
-		if(areTherePages(course.getCourseId(),apiHandler)) {
-			M_log.info("*** Pages has content for Course: "+course.getCourseId());
-			return true;
-		}
-		if(areThereExternalToolsAdded(course.getCourseId(),apiHandler)) {
-			M_log.info("*** ExternalTools has content for Course: "+course.getCourseId());
-			return true;
+		boolean response=false;
+		EnumSet<RequestTypeEnum> contentReqType = RequestTypeEnum.contentReqType;
+		for (RequestTypeEnum requestType : contentReqType) {
+			if(apiResponseTemplate(course.getCourseId(),apiHandler,requestType)){
+				M_log.info(requestType.name()+ " has content for Course: "+course.getCourseId());
+				return true;
+			}
 		}
 		M_log.info("*** NO Content in Course: "+course.getCourseId());
-		return false;
+		return response;
 	}
-
-	private static boolean areThereAssignments(String courseId,ApiCallHandler apiHandler) {
-		return apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.ASSIGNMENT);
-	}
-	private static boolean areThereQuizzes(String courseId, ApiCallHandler apiHandler) {
-		return apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.QUIZZES);
-	}
-	private static boolean areThereAnnouncements(String courseId,ApiCallHandler apiHandler) {
-		return apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.ANNOUNCEMENT);
-	}
-	private static boolean areThereDiscussionTopics(String courseId, ApiCallHandler apiHandler) {
-		return apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.DISCUSSION_TOPICS);
-	}
-	private static boolean areThereFiles(String courseId, ApiCallHandler apiHandler) {
-		return apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.FILES);
-	}
-	private static boolean areThereGroups(String courseId, ApiCallHandler apiHandler) {
-		return apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.GROUPS);
-	}
-	private static boolean areThereModules(String courseId, ApiCallHandler apiHandler) {
-		return apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.MODULES);
-	}
-	private static boolean areTherePages(String courseId, ApiCallHandler apiHandler) {
-		return apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.PAGES);
-	}
-	private static boolean areThereExternalToolsAdded(String courseId, ApiCallHandler apiHandler) {
-		return apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.EXTERNAL_TOOLS);
-	}
-	private static boolean areThereGradeChanges(String courseId, ApiCallHandler apiHandler) {
-		return apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.GRADE_CHANGES);
-	}
-	private static boolean areThereConferences(String courseId, ApiCallHandler apiHandler) {
-		return apiResponseTemplate(courseId, apiHandler,RequestTypeEnum.CONFERENCE);
-	}
-	private static boolean areThereSyllabus(String courseId, ApiCallHandler apiHandler) {
-		return apiResponseTemplate(courseId, apiHandler, RequestTypeEnum.SYLLABUS);
-	}
+	
     /* This checks for activity in a course, we are looking for the "manually published" events in the past. Please note that the course we are checking 
      * is an unpublished course currently, we don't want to delete "manually published" course in the past as this indicates that the course is still in interest to an instructor.  
      */

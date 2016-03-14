@@ -2,6 +2,7 @@ package edu.umich.tl;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.EnumSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -40,11 +41,18 @@ public class ApiCallHandler {
 	}
 	
 	public enum RequestTypeEnum{
-		TERM, UNPUBLISHED_COURSE_LIST, UNPUBLISHED_COURSE_LIST_PAGINATION_URL, 
-		ASSIGNMENT,ANNOUNCEMENT,CONFERENCE,DISCUSSION_TOPICS,FILES,GRADE_CHANGES,GROUPS,MODULES,
-		PAGES,QUIZZES,EXTERNAL_TOOLS,COURSE_AUDIT_LOGS,COURSE_DELETE,SYLLABUS;
+		TERM, UNPUBLISHED_COURSE_LIST, UNPUBLISHED_COURSE_LIST_PAGINATION_URL,COURSE_AUDIT_LOGS,COURSE_DELETE,
+		FILES, ASSIGNMENT, ANNOUNCEMENT,  QUIZZES, MODULES, GRADE_CHANGES, CONFERENCE, DISCUSSION_TOPICS, SYLLABUS, GROUPS, PAGES, EXTERNAL_TOOLS;
+		/*
+		 * EnumSet is an ordered list(Iteration will traverses the elements in the order in which the enum constants are declared). 
+		 * The tools like file, assignment etc are more likely to have content in courses than rest of tools. 
+		 * So when checking for the content case we can break out of loop quickly and save calling rest of the api's.
+		 * hence the 'contentReqType' order need to be preserved.
+		 * The order of EnumSet(contentReqType) and the enum(RequestTypeEnum) should be same other wise the order of the enum get picked. 
+		 */
+		public static EnumSet<RequestTypeEnum> contentReqType=EnumSet.of(FILES, ASSIGNMENT, ANNOUNCEMENT, QUIZZES, MODULES, 
+				GRADE_CHANGES, CONFERENCE, DISCUSSION_TOPICS, SYLLABUS, GROUPS, PAGES, EXTERNAL_TOOLS); 
 	}
-
 	public HttpResponse getApiResponse(RequestTypeEnum requestType, String canvasTermIdForSisTermId, String url,String courseId) {
 		String urlSuffix = null;
 		boolean shouldAddPrefix=true;
